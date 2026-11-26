@@ -6,6 +6,7 @@ const { createApp } = require('./lib/mini');
 const QRCode = require('./lib/qr/QRCode'), QRL = require('./lib/qr/QRCode/QRErrorCorrectLevel');
 function qrDataUrl(text) { const q = new QRCode(-1, QRL.M); q.addData(text); q.make(); const n = q.getModuleCount(), m = 4, sz = n + m * 2; let d = ''; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z'; const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + sz + ' ' + sz + '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>'; return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64'); }
 const seed = require('./seed');
+const topicLib = require('./topics');
 
 const PORT = +process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -589,6 +590,25 @@ T.post('/settings', (req, res) => { const b = req.body || {}; const s = S();
   if (Array.isArray(b.teams)) b.teams.forEach((t, i) => { if (s.teams[i]) { if (t.name !== undefined) s.teams[i].name = clean(t.name, 40) || s.teams[i].name; if (t.mission !== undefined) s.teams[i].mission = clean(t.mission, 80); if (t.focus !== undefined) s.teams[i].focus = clean(t.focus, 300); } });
   if (Array.isArray(b.discussion)) { s.discussion = b.discussion.slice(0, 8).map(d => ({ min: clean(d.min, 20), title: clean(d.title, 100), prompts: (Array.isArray(d.prompts) ? d.prompts : []).map(p => clean(p, 300)).filter(Boolean).slice(0, 10) })); }
   save(); pushAll(); res.json({ ok: true }); });
+// Сэдвийн сан: хичээл бүрийн тусдаа шалгалтыг ачаална (асуулт, баг, сэдэв, ярилцлага солигдоно; хариулт, оноо цэвэрлэгдэнэ).
+const SEED_TOPIC = { key: '10.4.2v', grade: '10', code: '10.4.2в*', topic: 'Салст ба сормуус' };
+function topicList() { const s0 = seed.make(); return [Object.assign({ n: s0.questions.length }, SEED_TOPIC)].concat(topicLib.list()).map(t => Object.assign(t, { current: (S().topicKey || SEED_TOPIC.key) === t.key })); }
+T.get('/topics', (req, res) => res.json({ ok: true, topics: topicList() }));
+T.post('/topic', (req, res) => { const key = String((req.body || {}).key || ''); const keepStudents = !!(req.body || {}).keepStudents;
+  let def;
+  if (key === SEED_TOPIC.key) { const s0 = seed.make(); def = { key, grade: '10', topic: s0.settings.topic, className: s0.settings.className, teams: s0.settings.teams, areas: s0.settings.areas, discussion: s0.settings.discussion, questions: s0.questions, stage3: s0.settings.stages[2] }; }
+  else { const t = topicLib.get(key); if (!t) return ERR(res, 404, 'Сэдэв олдсонгүй.'); def = Object.assign({}, t, { stage3: { name: t.duel.name, title: t.duel.title } }); }
+  if (R().phase === 'live') return ERR(res, 409, 'Сорилт явагдаж байна. Эхлээд дуусгаад дараа нь сэдвээ солино уу.');
+  backup('before-topic');
+  const s = S(); s.topicKey = key; s.topic = def.topic; if (def.className) s.className = def.className;
+  s.teams = JSON.parse(JSON.stringify(def.teams)); s.areas = def.areas.slice(); s.discussion = JSON.parse(JSON.stringify(def.discussion));
+  if (s.stages[2]) { s.stages[2].name = def.stage3.name; s.stages[2].title = def.stage3.title; }
+  db.questions = JSON.parse(JSON.stringify(def.questions));
+  if (!keepStudents) db.students = [];
+  db.answers = {}; db.tans = {}; db.pvotes = {}; db.ratings = {}; db.chat = { 1: [], 2: [], 3: [], 4: [] }; db.adjust = {}; db.teamAdjust = {}; db.feed = []; db.present = { kind: null };
+  if (!keepStudents) db.tokens = {};
+  db.run = { phase: 'lobby', step: 0, ph: 0, endsAt: null, paused: false, pausedLeft: 0, locked: false, revealed: {}, finalMap: {}, script: [], startedAt: null, finishedAt: null };
+  feed('📚 Сэдэв солигдлоо: ' + def.topic, 'sys'); save(true); pushAll(); res.json({ ok: true, topic: def.topic }); });
 T.post('/password', (req, res) => { if (limited(req, 'pw', 10, 600000)) return ERR(res, 429, 'Хэт олон оролдлого.'); const b = req.body || {};
   if (!checkPw(String(b.current || ''), S().teacherSalt, S().teacherHash)) return ERR(res, 403, 'Одоогийн нууц үг буруу байна.');
   const n = String(b.next || ''); if (n.length < 8 || n.length > 100) return ERR(res, 400, 'Шинэ нууц үг хамгийн багадаа 8 тэмдэгт байна.'); if (n !== String(b.confirm || '')) return ERR(res, 400, 'Шинэ нууц үг давтахтай таарахгүй байна.');

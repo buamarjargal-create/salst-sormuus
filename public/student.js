@@ -211,7 +211,7 @@ function scoreChips(st) {
 var PHL = { ind: 'Хувийн хариулт', team: 'Багийн шийдвэр', peer: 'Үнэлгээ', rev: 'Үр дүн' };
 function stepTitle() {
   var t = ST.t, c = ST.cur || {};
-  var k = t.kind === 'q' ? 'Асуулт ' + (c.qn || '') + '/' + (c.qTotal || '') : t.kind === 'write' ? 'Багийн хариулт бичих' : t.kind === 'peer' ? 'Бусдын хариултыг шалгах' : t.kind === 'duel' ? 'Сормуусны тулаан' : 'Багаа авар!';
+  var k = t.kind === 'q' ? 'Асуулт ' + (c.qn || '') + '/' + (c.qTotal || '') : t.kind === 'write' ? 'Багийн хариулт бичих' : t.kind === 'peer' ? 'Бусдын хариултыг шалгах' : t.kind === 'duel' ? ((ST && ST.stages && ST.stages[2] && ST.stages[2].title) || 'Багийн тулаан') : 'Багаа авар!';
   var p = t.kind === 'write' ? 'Багийн нэг хариулт' : PHL[t.ph] || '';
   return '<b>' + esc(k) + '</b><span class="muted"> · ' + esc(p) + '</span>';
 }
@@ -468,7 +468,7 @@ function teamRevBlocks(B, c, kind) {
     var r = c.result;
     B.push(['trme', '<div class="card mymini ' + (r.none ? '' : r.ok === true ? 'tint-mint' : 'tint-pink') + '"><b>Миний хувийн хариулт:</b> ' + (r.none ? 'Хариулаагүй' : (r.ok === true ? 'Зөв хариулт.' : 'Буруу хариулт.') + ' · +' + num(r.pts) + ' оноо') + (c.myAnswer ? '<div class="small muted">' + esc(describeAnswer(q, c.myAnswer)) + '</div>' : '') + '</div>']);
   }
-  B.push(['trexp', '<div class="card qcard">' + qHead(c, kind === 'duel' ? 'Cilia Duel' : 'Save Your Team') + qBody(q) +
+  B.push(['trexp', '<div class="card qcard">' + qHead(c, kind === 'duel' ? ((ST && ST.stages && ST.stages[2] && ST.stages[2].name) || 'Duel') : 'Save Your Team') + qBody(q) +
     (ta ? '<div class="small muted">Багийн хариулт' + (ta.auto ? ' (автоматаар олонхийн)' : ta.by ? ' · ' + esc(ta.by) : '') + ':</div><div class="ans mine' + (ok ? '' : ' bad') + '">' + esc(ta.desc || '') + '</div>' : '') +
     '<div class="small muted mt8">Зөв хариулт:</div><div class="ans good">' + esc(correctText(q, rv)) + '</div>' + explain(rv) + '</div>']);
 }

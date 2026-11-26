@@ -12,7 +12,7 @@ try { var _t = localStorage.getItem('enzT_tab'); if (_t) TAB = _t; var _s = JSON
 
 var KINDS = { q: ['ind', 'rev'], write: ['team'], peer: ['peer', 'rev'], duel: ['ind', 'team', 'rev'], final: ['team', 'rev'] };
 var PHL = { ind: 'Хувийн хариулт', team: 'Багийн хэлэлцүүлэг', peer: 'Өөр багийг үнэлэх', rev: 'Үр дүн, тайлбар' };
-var KINDL = { q: 'Асуулт', write: 'Багийн хариулт бичих', peer: 'Бусдын хариултыг шалгах', duel: 'Сормуусны тулаан', final: 'Эцсийн сорил' };
+var KINDL = { q: 'Асуулт', write: 'Багийн хариулт бичих', peer: 'Бусдын хариултыг шалгах', duel: 'Багийн тулаан', final: 'Эцсийн сорил' };
 var TYPEL = { mcq: 'Нэг сонголт', multi: 'Олон сонголт', tf: 'Үнэн / Худал', order: 'Дараалал', match: 'Тааруулах', short: 'Богино хариулт' };
 var RATEL = { ok: '✅ Зөв', partial: '🟡 Хэсэгчлэн', wrong: '❌ Буруу' };
 var ABC = 'АБВГДЕЖЗ';
@@ -197,7 +197,7 @@ function previewScript() {
 }
 function renderPath() {
   var t = ST.t, live = t.phase === 'live', sc = ST.script && ST.script.length ? ST.script : previewScript();
-  var sig = JSON.stringify([t.phase, t.step, t.phIndex, sc.map(function (x) { return [x.label, x.stage, x.revealed]; })]);
+  var sig = JSON.stringify([t.phase, t.step, t.phIndex, (ST.stages || []).map(function (x) { return x.name; }), sc.map(function (x) { return [x.label, x.stage, x.revealed]; })]);
   paint($('path'), 'path', sig, function () {
     var o = '';
     [1, 2, 3, 4].forEach(function (n) {
@@ -469,7 +469,7 @@ function openAward(tg) {
 }
 
 /* ================= АСУУЛТУУД ================= */
-var STAGE_GROUPS = [[1, '1 · Team vs Team', 'Бүх багт ижил асуултууд дарааллаар (slot) гарна.'], [2, '2 · Peer Check', 'Багууд нэг бичгэн хариулт өгч, өөр баг үнэлнэ. Эхний идэвхтэй асуулт ашиглагдана.'], [3, '3 · Cilia Duel', 'Баг тус бүр өөрийн асуулттай (баг = 1..4).'], [4, '4 · Save Your Team', 'Сэдэв тус бүрийн асуулт: багийн хамгийн сул сэдвээр сонгогдоно.'], [0, 'Сан · ярилцлага', 'Сорилтод ордоггүй, ярилцлагад ашиглах асуултууд.']];
+var STAGE_GROUPS = [[1, '1 · Team vs Team', 'Бүх багт ижил асуултууд дарааллаар (slot) гарна.'], [2, '2 · Peer Check', 'Багууд нэг бичгэн хариулт өгч, өөр баг үнэлнэ. Эхний идэвхтэй асуулт ашиглагдана.'], [3, '3 · Duel', 'Баг тус бүр өөрийн асуулттай (баг = 1..4).'], [4, '4 · Save Your Team', 'Сэдэв тус бүрийн асуулт: багийн хамгийн сул сэдвээр сонгогдоно.'], [0, 'Сан · ярилцлага', 'Сорилтод ордоггүй, ярилцлагад ашиглах асуултууд.']];
 function rQuestions() {
   var s = ST, m = $('main');
   if (!$('qbar')) {
@@ -700,11 +700,12 @@ $('main').addEventListener('click', function (ev) {
 
 /* ================= ТОХИРГОО ================= */
 var SCORE_INFO = [['ind', 'Хувийн зөв хариулт', '1, 3-р шатанд сурагч бүр зөв хариулбал авна.'], ['teamQ', 'Багийн зөв хариулт', '1-р шатанд багийн олонх зөв, 2-р шатанд багийн хариулт «Зөв», 3, 4-р шатанд түгжсэн хариулт зөв бол багт өгнө.'], ['teamPartial', 'Багийн хэсэгчлэн зөв', '2-р шатанд багийн бичсэн хариулт «Хэсэгчлэн зөв» гэж үнэлэгдвэл.'], ['peerHit', 'Peer Check — яг таарсан', 'Өөр багийн хариултыг эцсийн үнэлгээтэй яг ижил үнэлсэн сурагч бүрт.'], ['peerNear', 'Peer Check — ойролцоо', 'Үнэлгээ нь нэг шатаар зөрсөн (жишээ нь Зөв ↔ Хэсэгчлэн) сурагчид.']];
-var TIME_INFO = [['q', '1-р шат · асуулт бүр', { ind: 'Хувийн хариулт', rev: 'Үр дүн, тайлбар' }], ['write', '2-р шат · багийн хариулт', { team: 'Багийн хариулт бичих' }], ['peer', '2-р шат · Peer Check', { peer: 'Өөр багийг үнэлэх', rev: 'Үр дүн' }], ['duel', '3-р шат · Cilia Duel', { ind: 'Хувийн хариулт', team: 'Багийн хэлэлцүүлэг, түгжих', rev: 'Үр дүн' }], ['final', '4-р шат · Save Your Team', { team: 'Багийн хариулт', rev: 'Үр дүн' }]];
+var TIME_INFO = [['q', '1-р шат · асуулт бүр', { ind: 'Хувийн хариулт', rev: 'Үр дүн, тайлбар' }], ['write', '2-р шат · багийн хариулт', { team: 'Багийн хариулт бичих' }], ['peer', '2-р шат · Peer Check', { peer: 'Өөр багийг үнэлэх', rev: 'Үр дүн' }], ['duel', '3-р шат · Duel', { ind: 'Хувийн хариулт', team: 'Багийн хэлэлцүүлэг, түгжих', rev: 'Үр дүн' }], ['final', '4-р шат · Save Your Team', { team: 'Багийн хариулт', rev: 'Үр дүн' }]];
 function rSettings() {
   var m = $('main'); if (m.dataset.drawn === 'set') return; m.dataset.drawn = 'set';
   var s = ST.settings, chk = function (id, v, l, d) { return '<label class="chk big"><input id="' + id + '" type="checkbox"' + (v ? ' checked' : '') + '><span><b>' + l + '</b>' + (d ? '<small>' + d + '</small>' : '') + '</span></label>'; };
   var o = '<div class="setgrid">';
+  o += '<div class="card"><div class="taskhead"><h3>📚 Сэдэв сонгох</h3>' + stk('lab', 44) + '</div><p class="small muted">Хичээл бүр тусдаа шалгалттай (15 асуулт, 4 шат). Сэдэв сонговол асуулт, баг, ярилцлага тэр хичээлийнхээр солигдож, хариулт, оноо цэвэрлэгдэнэ. Өмнөх төлөв автоматаар нөөцлөгдөнө.</p><label for="tp_sel">Хичээлийн сэдэв</label><select id="tp_sel"><option>Ачаалж байна…</option></select><div class="checks">' + chk('tp_keep', false, 'Сурагчдыг хэвээр үлдээх', 'Унтраалттай бол сурагчид шинээр нэр, ангиа бичиж орно') + '</div><button class="btn primary" type="button" id="tp_go">📚 Энэ сэдвийг ачаалах</button></div>';
   o += '<div class="card"><div class="taskhead"><h3>Хичээл ба нэвтрэлт</h3>' + stk('atom', 44) + '</div><div class="frm"><div><label for="c_class">Ангийн нэр</label><input id="c_class" type="text" maxlength="40" value="' + esc(s.className) + '"></div><div><label for="c_topic">Сэдэв</label><input id="c_topic" type="text" maxlength="60" value="' + esc(s.topic) + '"></div><div><label for="c_subj">Хичээл</label><input id="c_subj" type="text" maxlength="60" value="' + esc(s.subject || '') + '"></div><div><label for="c_code">Хичээлийн код (сурагчид оруулна)</label><input id="c_code" type="text" maxlength="30" value="' + esc(s.code) + '"></div><div class="full"><label for="c_user">Багшийн нэвтрэх нэр</label><input id="c_user" type="text" maxlength="60" autocomplete="off" value="' + esc(s.teacherUser) + '"></div>' +
     '<div class="full"><label for="c_sm">Багийн онооны горим</label><select id="c_sm"><option value="avg"' + (s.scoreMode === 'avg' ? ' selected' : '') + '>Гишүүдийн дундаж + багийн оноо (7 ба 6 гишүүнтэй багт шударга)</option><option value="sum"' + (s.scoreMode === 'sum' ? ' selected' : '') + '>Гишүүдийн нийлбэр + багийн оноо</option></select></div></div>' +
     '<div class="checks col2">' + chk('c_pin', s.pinEnabled, 'Сурагчийн PIN шаардах', 'Сурагч·Баг табаас PIN онооно') + chk('c_auto', s.autoAdvance, 'Автомат урсгал', 'Үр дүнгийн үе дуусахад дараагийн алхам руу автоматаар шилжинэ') + chk('c_chat', s.chatOn, 'Багийн чат нээлттэй', 'Сурагчид багийнхантайгаа бичилцэнэ') + '</div>' +
@@ -728,6 +729,11 @@ function rSettings() {
   };
   qsa('.tm_in').forEach(function (e) { e.addEventListener('input', calc); }); calc();
   var redraw = function () { m.dataset.drawn = ''; setTimeout(rSettings, 0); };
+  api('/api/t/topics').then(function (j) { var sel = $('tp_sel'); if (!sel || !j || !j.ok) return; var g = { '10': [], '11': [] };
+    j.topics.forEach(function (t) { (g[t.grade] = g[t.grade] || []).push('<option value="' + esc(t.key) + '"' + (t.current ? ' selected' : '') + '>' + esc(t.code + ' · ' + t.topic) + (t.current ? ' (одоо)' : '') + '</option>'); });
+    sel.innerHTML = Object.keys(g).filter(function (k) { return g[k].length; }).map(function (k) { return '<optgroup label="' + k + '-р анги">' + g[k].join('') + '</optgroup>'; }).join(''); });
+  $('tp_go').onclick = function () { var sel = $('tp_sel'), key = sel.value, name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : key, keep = $('tp_keep').checked;
+    ask({ title: 'Сэдэв солих', text: '«' + name + '» сэдвийн шалгалтыг ачаалах уу? Одоогийн асуулт, хариулт, оноо солигдоно' + (keep ? '' : ', сурагчдын жагсаалт цэвэрлэгдэнэ') + '. Өмнөх төлөв автоматаар нөөцлөгдөнө.', ok: '📚 Ачаалах', danger: true }).then(function (y) { if (y) post('/api/t/topic', { key: key, keepStudents: keep }).then(function (r) { if (r.ok) { toast('Сэдэв ачаалагдлаа: ' + r.topic, 'ok'); redraw(); } }); }); };
   $('c_save').onclick = function () { post('/api/t/settings', { className: $('c_class').value, topic: $('c_topic').value, subject: $('c_subj').value, code: $('c_code').value, teacherUser: $('c_user').value, scoreMode: $('c_sm').value, pinEnabled: $('c_pin').checked, autoAdvance: $('c_auto').checked, chatOn: $('c_chat').checked }).then(function (j) { if (j.ok) { toast('Тохиргоо хадгалагдлаа.', 'ok'); redraw(); } }); };
   $('c_save_sc').onclick = function () { var sc = {}; qsa('.sc').forEach(function (e) { sc[e.dataset.key] = +e.value; }); post('/api/t/settings', { scoring: sc }).then(function (j) { if (j.ok) { toast('Оноо хадгалагдлаа.', 'ok'); redraw(); } }); };
   $('c_save_tm').onclick = function () { var tm = {}; qsa('.tm_in').forEach(function (e) { (tm[e.dataset.kind] = tm[e.dataset.kind] || {})[e.dataset.ph] = +e.value; }); post('/api/t/settings', { timing: tm }).then(function (j) { if (j.ok) { toast('Хугацаа хадгалагдлаа.', 'ok'); redraw(); } }); };
