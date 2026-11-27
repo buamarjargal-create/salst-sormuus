@@ -251,3 +251,14 @@ body{overflow-x:hidden}
 .fastr.me{background:var(--butter-1);font-weight:800}.fastr .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fastr .fs{font-weight:800;color:var(--plum)}
 .fastr .sticker{width:22px;height:22px;object-fit:contain;filter:none}
 .cf.emo{background:none!important;width:auto;height:auto;font-size:22px}
+
+/* анги, нэр сонгох */
+.pkstep{display:flex;align-items:center;gap:8px;font-weight:800;margin:14px 0 8px}.pkn{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--pink-2);font-size:.8rem}
+.pkcls{display:flex;flex-wrap:wrap;gap:8px}.pkc{border:2px solid var(--lilac-2,#e5dbfa);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-weight:800;cursor:pointer;color:inherit}
+.pkc.on{background:var(--lilac-2,#e5dbfa);border-color:#b9a3ec}
+#pkQ{margin-bottom:8px}
+.pknames{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:52vh;overflow:auto;padding:2px}
+.pkname .av{flex:none}.pkname{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:#fff;border-radius:16px;padding:9px 10px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(120,90,160,.12);color:inherit;min-width:0}
+.pkname .pnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pkname small{color:var(--ink2);font-weight:700;font-size:.7rem}
+.pkname:active{transform:scale(.97)}
+@media (max-width:520px){.pknames{grid-template-columns:1fr}.pkname .pnm{white-space:normal}}

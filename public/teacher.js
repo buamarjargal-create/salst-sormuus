@@ -114,8 +114,25 @@ function buildStatic() {
 }
 function setTab(t) { if (!TABS.some(function (x) { return x[0] === t; })) t = 'live'; TAB = t; store('enzT_tab', t); sigs = {}; $('main').dataset.tab = ''; renderAll(); window.scrollTo(0, 0); }
 
+/* ---------- журналаас ирсэн нэрсийн жагсаалт ---------- */
+// Журналын «📤 Нэрсийг сорилтын сайт руу» товч энэ хуудсыг #roster=... хаягтай нээнэ. Жагсаалтыг энэ хөтчид хадгалж,
+// сервер дахин асахад (Render) автоматаар дахин илгээнэ.
+function lsG(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function unb64url(h) { var b = h.replace(/-/g, '+').replace(/_/g, '/'); var bin = atob(b + '==='.slice((b.length + 3) % 4)); var u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+var ROSTER_PENDING = null;
+function readRosterHash() { var m = location.hash.match(/[#&]roster=([^&]+)/); if (!m) return; try { ROSTER_PENDING = JSON.parse(unb64url(m[1])); lsS('bb_roster', JSON.stringify(ROSTER_PENDING)); } catch (e) { ROSTER_PENDING = null; } history.replaceState(null, '', location.pathname + location.search); if (ROSTER_PENDING && typeof ST !== 'undefined' && ST) syncRoster(ST); }
+readRosterHash(); window.addEventListener('hashchange', readRosterHash);
+var rosterSyncing = false;
+function syncRoster(s) {
+  if (rosterSyncing) return; var raw = ROSTER_PENDING ? JSON.stringify(ROSTER_PENDING) : lsG('bb_roster'); if (!raw) return;
+  var r; try { r = JSON.parse(raw); } catch (e) { return; } if (!r || !r.classes) return;
+  if (!ROSTER_PENDING && s.roster && String(s.roster.v) === String(r.v)) return;
+  rosterSyncing = true;
+  post('/api/t/roster', r).then(function (j) { rosterSyncing = false; if (j.ok && ROSTER_PENDING) toast('📋 Журналаас ' + j.classes + ' анги, ' + j.students + ' сурагчийн нэрс орлоо.', 'ok'); ROSTER_PENDING = null; }).catch(function () { rosterSyncing = false; });
+}
 function apply(s) {
-  ST = s; OFF = s.t.now - Date.now();
+  ST = s; OFF = s.t.now - Date.now(); syncRoster(s);
   if (s.chat) [1, 2, 3, 4].forEach(function (t) { CHAT[t] = (s.chat[t] || []).slice(); });
   renderAll();
 }
@@ -729,6 +746,9 @@ function rSettings() {
     '<div class="checks col2">' + chk('c_pin', s.pinEnabled, 'Сурагчийн PIN шаардах', 'Сурагч·Баг табаас PIN онооно') + chk('c_auto', s.autoAdvance, 'Автомат урсгал', 'Үр дүнгийн үе дуусахад дараагийн алхам руу автоматаар шилжинэ') + chk('c_chat', s.chatOn, 'Багийн чат нээлттэй', 'Сурагчид багийнхантайгаа бичилцэнэ') + '</div>' +
     '<button class="btn primary" type="button" id="c_save">💾 Хадгалах</button></div>';
   var gr = s.grade || { ind: 5 };
+  var ro = ST.roster;
+  o += '<div class="card"><div class="taskhead"><h3>📋 Сурагчдын нэрсийн жагсаалт</h3>' + stk('pencil', 44) + '</div>' + (ro ? '<p><b>' + ro.classes + ' анги, ' + ro.students + ' сурагч</b> — сурагчид нэвтрэхдээ ангиа сонгоод нэрээ дарна.</p>' : '<p class="muted">Жагсаалт алга — сурагчид нэр, ангиа гараар бичнэ.</p>') +
+    '<p class="small muted">Багшийн журналын <b>Тохиргоо</b> хэсгийн «📤 Нэрсийг сорилтын сайт руу илгээх» товчийг дарвал энэ жагсаалт шинэчлэгдэнэ. Нэрс GitHub-д биш, зөвхөн энэ сайтын серверт хадгалагдаж, хичээлийн кодтой хүнд л харагдана.</p></div>';
   o += '<div class="card"><div class="taskhead"><h3>Сурагч бүрийн авах оноо</h3>' + stk('strawberry', 44) + '</div><p class="small muted">Сурагч бүр зөвхөн <b>өөрийн</b> хариултаар энэ онооноос авна (багаар хийсэн шатанд ч эхлээд хүн бүр өөрөө хариулна). Багийн нийт оноо нь гишүүдийн оноогоор гарна.</p>' +
     '<div class="srow"><div><b>Авах оноо</b><div class="small muted">Жишээ нь 5</div></div><input type="number" min="0.5" max="100" step="0.5" id="g_ind" value="' + gr.ind + '" aria-label="Сурагч бүрийн авах оноо"></div>' +
     '<div class="srow"><div><b>1-р байрны багт нэмэх оноо</b><div class="small muted">Сорилт дуусахад 1-р байрт орсон багийн гишүүн бүрт нэмнэ (0 бол нэмэхгүй)</div></div><input type="number" min="0" max="5" step="0.5" id="g_win" value="' + (s.winBonus != null ? s.winBonus : 1) + '" aria-label="1-р байрны нэмэлт оноо"></div>' +

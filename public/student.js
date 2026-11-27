@@ -20,6 +20,7 @@ function D(key) { return drafts[key] || (drafts[key] = {}); }
 
 var SCREENS = ['s-code', 's-names', 's-main', 's-boot'];
 function show(id) {
+  if (id === 's-code') setTimeout(initPicker, 0);
   SCREENS.forEach(function (x) { $(x).classList.toggle('hide', x !== id); });
   live = id === 's-main';
   $('chatRoot').classList.toggle('hide', !live); $('meChip').classList.toggle('hide', !live);
@@ -52,14 +53,14 @@ function doLogin(takeover) {
   if (nm.length < 2) return err('codeErr', 'Нэрээ бичнэ үү.');
   if (!cls) return err('codeErr', 'Ангиа бичнэ үү (жишээ нь 10Д).');
   b.classList.add('busy');
-  api('/api/join', { body: { name: nm, cls: cls, takeover: !!takeover, token: TOKEN } }).then(function (j) {
+  api('/api/join', { body: { name: nm, cls: cls, grp: PICK.g || '', takeover: !!takeover, token: TOKEN } }).then(function (j) {
     b.classList.remove('busy');
     if (j.need === 'takeover') {
       ask(nm + ' (' + cls + ') — өөр төхөөрөмж холбогдсон байна', 'Энэ нэр, анги дээр өөр утас эсвэл компьютер холбогдсон байна. Энэ чи мөн үү? Үргэлжлүүлбэл нөгөө төхөөрөмж салгагдана.', 'Тийм, би мөн', 'Үгүй', 'mouse2')
         .then(function (y) { if (y) doLogin(true); });
       return;
     }
-    if (!j.ok) return err('codeErr', j.err || 'Нэвтэрч чадсангүй.');
+    if (!j.ok) { err('codeErr', j.err || 'Нэвтэрч чадсангүй.'); if (!PICK.manual && $('codeErr2')) { $('codeErr2').textContent = j.err || 'Нэвтэрч чадсангүй.'; $('codeErr2').classList.remove('hide'); } return; }
     setToken(j.token); lsSet('ss_nm', nm); lsSet('ss_cls', cls); toast('Амжилттай орлоо.', 'ok'); start(); fetchState();
   }).catch(function () { b.classList.remove('busy'); err('codeErr', 'Холболт тасарлаа. Дахин оролдоно уу.'); });
 }
@@ -68,6 +69,51 @@ function logout(msg) {
   if (poll) { clearInterval(poll); poll = null; } ST = null; $('s-main').innerHTML = ''; UI.msgs = []; UI.chatInit = false; UI.seen = {}; UI.unread = 0; closeChat();
   $('conn').classList.add('hide'); show('s-code'); if (msg) toast(msg, 'bad');
 }
+
+/* ------------------------------ анги, нэрээ жагсаалтаас сонгох ------------------------------ */
+// Хичээлийн код: QR холбоос (?c=...) эсвэл өмнө нь оруулсан код. Нэрс нь багшийн журналаас ирсэн жагсаалт.
+var PICK = { code: '', classes: null, g: '', q: '', manual: false };
+(function () { try { var c = new URLSearchParams(location.search).get('c'); if (c) { lsSet('ss_code', c); history.replaceState(null, '', location.pathname); } } catch (e) {} PICK.code = lsGet('ss_code') || ''; })();
+function initPicker() {
+  var w = $('pickWrap'); if (!w) return;
+  if (PICK.manual) { w.classList.add('hide'); $('codeForm').classList.remove('hide'); $('backPick').classList.toggle('hide', !(PICK.classes && PICK.classes.length)); return; }
+  if (PICK.classes) return drawPicker();
+  if (!PICK.code) return drawCodeAsk();
+  api('/api/roster?code=' + encodeURIComponent(PICK.code)).then(function (j) {
+    if (j.ok && j.classes && j.classes.length) { PICK.classes = j.classes; drawPicker(); }
+    else if (j._status === 403) { lsSet('ss_code', null); PICK.code = ''; drawCodeAsk('Хичээлийн код буруу байна.'); }
+    else { PICK.classes = []; PICK.manual = true; initPicker(); }
+  }).catch(function () { PICK.manual = true; initPicker(); });
+}
+function drawCodeAsk(err) {
+  var w = $('pickWrap'); w.classList.remove('hide'); $('codeForm').classList.add('hide');
+  w.innerHTML = '<label for="pkCode">Хичээлийн код</label><input id="pkCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Самбар дээрх код" maxlength="30">' + (err ? '<p class="err">' + esc(err) + '</p>' : '') +
+    '<button type="button" class="btn primary lg wide" id="pkGo">Үргэлжлүүлэх</button><p class="center small mt8"><button type="button" class="btn ghost sm" id="pkManual">Нэр, ангиа гараар бичих</button></p>';
+  $('pkGo').onclick = function () { var v = $('pkCode').value.trim(); if (!v) return; PICK.code = v; lsSet('ss_code', v); PICK.classes = null; initPicker(); };
+  $('pkCode').onkeydown = function (e) { if (e.key === 'Enter') $('pkGo').click(); };
+  $('pkManual').onclick = function () { PICK.manual = true; initPicker(); };
+}
+function pkNorm(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[.\s]+/g, ' ').trim(); }
+function drawPicker() {
+  var w = $('pickWrap'); w.classList.remove('hide'); $('codeForm').classList.add('hide');
+  var cl = PICK.classes, cur = cl.filter(function (c) { return c.g === PICK.g; })[0];
+  var h = '<div class="pkstep"><span class="pkn">1</span> Ангиа сонго</div><div class="pkcls">' + cl.map(function (c) { return '<button type="button" class="pkc' + (c.g === PICK.g ? ' on' : '') + '" data-g="' + esc(c.g) + '">' + esc(c.g) + '</button>'; }).join('') + '</div>';
+  if (cur) {
+    var q = pkNorm(PICK.q), list = cur.s.filter(function (x) { return !q || pkNorm(x.n).indexOf(q) >= 0; });
+    h += '<div class="pkstep"><span class="pkn">2</span> Нэрээ дар</div><input id="pkQ" type="search" placeholder="🔎 Нэрээ хайх…" value="' + esc(PICK.q) + '" autocomplete="off">' +
+      '<div class="pknames">' + list.map(function (x) { var i = cur.s.indexOf(x); return '<button type="button" class="pkname" data-i="' + i + '">' + avatar(x.n, 26) + '<span class="pnm">' + esc(x.n) + '</span>' + (x.c !== cur.g ? '<small>' + esc(x.c) + '</small>' : '') + '</button>'; }).join('') + (list.length ? '' : '<p class="muted small">Олдсонгүй.</p>') + '</div>';
+  }
+  h += '<p id="codeErr2" class="err hide" role="alert"></p><p class="center small mt8"><button type="button" class="btn ghost sm" id="pkManual">Нэр маань жагсаалтад алга — гараар бичих</button></p>';
+  w.innerHTML = h;
+  [].forEach.call(w.querySelectorAll('.pkc'), function (b) { b.onclick = function () { PICK.g = b.dataset.g; PICK.q = ''; drawPicker(); }; });
+  var qi = $('pkQ'); if (qi) qi.oninput = function () { PICK.q = qi.value; var pos = qi.selectionStart; drawPicker(); var n = $('pkQ'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+  [].forEach.call(w.querySelectorAll('.pkname'), function (b) { b.onclick = function () {
+    var x = cur.s[+b.dataset.i];
+    ask('Чи ' + x.n + ' мөн үү?', cur.g + (x.c !== cur.g ? ' · ' + x.c : '') + ' — өөрийнхөө нэрийг л сонгоорой.', 'Тийм, би', 'Үгүй', 'mouse2').then(function (y) { if (!y) return; $('nm').value = x.n; $('cls').value = x.c; doLogin(false); });
+  }; });
+  $('pkManual').onclick = function () { PICK.manual = true; initPicker(); };
+}
+document.addEventListener('click', function (e) { if (e.target && e.target.id === 'backPickBtn') { PICK.manual = false; initPicker(); } });
 
 /* ------------------------------ баталгаажуулах цонх ------------------------------ */
 function ask(title, msg, okT, noT, st) {
