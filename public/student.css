@@ -241,3 +241,13 @@ body{overflow-x:hidden}
 
 /* урт нэр (biologybyamra) утсанд багтах */
 @media (max-width:420px){body.in #clsPill{display:none}.top .brand{font-size:1rem;gap:6px}}
+
+/* 🔥 цуваа, ⚡ хурдан */
+.funcard{display:flex;flex-direction:column;gap:10px;background:linear-gradient(135deg,#fff6e8,#ffeef5)}
+.funcard.hot{background:linear-gradient(135deg,#ffe3c2,#ffd3e2);box-shadow:0 0 0 3px #ffb36b55,var(--sh2)}
+.streak{display:flex;align-items:center;gap:12px}.streak .fl{font-size:2.4rem;animation:flick .9s ease-in-out infinite alternate;display:inline-block}
+@keyframes flick{from{transform:scale(1) rotate(-4deg)}to{transform:scale(1.15) rotate(4deg)}}
+.fastw{display:flex;flex-direction:column;gap:6px}.fastr{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:6px 10px}
+.fastr.me{background:var(--butter-1);font-weight:800}.fastr .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fastr .fs{font-weight:800;color:var(--plum)}
+.fastr .sticker{width:22px;height:22px;object-fit:contain;filter:none}
+.cf.emo{background:none!important;width:auto;height:auto;font-size:22px}

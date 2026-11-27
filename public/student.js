@@ -297,6 +297,8 @@ function inputs(q, dk, d) {
     o = '<p class="small muted">Мөр бүрд тохирох хариултыг сонго.</p>' + q.lefts.map(function (l, k) {
       return '<div class="mrow"><b>' + esc(l) + '</b><select data-act="mt"' + a + ' data-k="' + k + '" data-fk="' + esc(dk) + '|m' + k + '" aria-label="' + esc(l) + '"><option value="">— сонго —</option>' + q.rights.map(function (r) { return '<option value="' + r.i + '"' + (mm[k] === r.i ? ' selected' : '') + '>' + esc(r.text) + '</option>'; }).join('') + '</select></div>';
     }).join('');
+    var used = mm.filter(function (v) { return v !== undefined && v !== null; });
+    if (used.length !== new Set(used).size) o += '<p class="small" style="color:#c0587a">⚠ Нэг хариултыг хоёр мөрөнд сонгосон байна — шалгаад илгээгээрэй.</p>';
   }
   return o;
 }
@@ -354,9 +356,28 @@ function resultCard(r, seed, pts) {
   return '<div class="card rescard r-' + k + ' pop">' + stk(ok ? pick('happy', seed) : pick('sad', seed), 92, 'resstk') +
     '<div class="rest"><div class="resh">' + (ok ? '✔ ' : none ? '' : '✗ ') + esc(title) + '</div><div class="ress">' + esc(sub) + '</div></div><div class="respts">' + (p > 0 ? '+' + num(p) : '0') + '<small>оноо</small></div></div>';
 }
+// 🔥 цуваа ба ⚡ хамгийн хурдан
+var STREAKMSG = ['', '', 'Хоёр дараалан! Халуун байна 🔥', 'Гурав дараалан! Галын цуваа 🔥🔥', 'Зогсоох аргагүй! 🔥🔥🔥', 'Домогт цуваа! 👑🔥'];
+function funBlock(B, c) {
+  var st = c.streak || { cur: 0, best: 0 }, f = c.fast || [], me = ST.me;
+  var meFast = f.findIndex(function (x) { return x.name === (me.name || '').split(' · ')[0]; });
+  if (st.cur < 2 && !f.length) return;
+  var medal = ['🥇', '🥈', '🥉'];
+  var h = '<div class="card funcard' + (st.cur >= 3 ? ' hot' : '') + ' pop">';
+  if (st.cur >= 2) h += '<div class="streak"><span class="fl">' + (st.cur >= 5 ? '👑' : '🔥') + '</span><div><b>' + st.cur + ' дараалан зөв!</b><div class="small muted">' + esc(STREAKMSG[Math.min(st.cur, 5)]) + (st.best > st.cur ? ' · Шилдэг цуваа: ' + st.best : '') + '</div></div></div>';
+  else if (st.best >= 2) h += '<div class="small muted">Таны шилдэг цуваа: 🔥 ' + st.best + '</div>';
+  if (f.length) h += '<div class="fastw"><div class="k small muted">⚡ Хамгийн хурдан зөв хариулсан</div>' + f.map(function (x, i) { return '<div class="fastr' + (i === meFast ? ' me' : '') + '">' + medal[i] + ' ' + teamSt(x.team, 22) + '<span class="fn">' + esc(x.name) + (i === meFast ? ' (би!)' : '') + '</span><span class="fs">' + x.sec + 'с</span></div>'; }).join('') + '</div>';
+  B.push(['fun', h + '</div>']);
+  if (st.cur >= 3 && UI.fireAt !== c.stepId) { UI.fireAt = c.stepId; burst(st.cur >= 5 ? 60 : 30); }
+}
+function burst(n) {
+  var cs = ['🔥', '✨', '⭐', '💖', '🌸'];
+  for (var i = 0; i < n; i++) { var e = document.createElement('i'); e.className = 'cf emo'; e.textContent = cs[i % cs.length]; e.style.left = Math.random() * 100 + 'vw'; e.style.animationDelay = (Math.random() * 0.8) + 's'; e.style.animationDuration = (2 + Math.random() * 1.4) + 's'; document.body.appendChild(e); (function (x) { setTimeout(function () { x.remove(); }, 4200); })(e); }
+}
 function qRevBlocks(B, c) {
   var q = c.q, rv = c.reveal;
   B.push(['res', resultCard(c.result, q.id + ST.me.id)]);
+  funBlock(B, c);
   var my = c.myAnswer ? '<div class="small muted">Таны хариулт:</div><div class="ans mine' + (c.result && c.result.ok === true ? '' : ' bad') + '">' + esc(describeAnswer(q, c.myAnswer)) + '</div>' : '';
   B.push(['expl', '<div class="card qcard">' + qHead(c) + qBody(q) + my + '<div class="small muted mt8">Зөв хариулт:</div><div class="ans good">' + esc(correctText(q, rv)) + '</div>' + explain(rv) +
     (c.result && c.result.why ? '<div class="expl"><h4>Таны тайлбар</h4>' + esc(c.result.why) + '</div>' : '') + '</div>']);
@@ -469,6 +490,7 @@ function teamRevBlocks(B, c, kind) {
   var q = c.q, rv = c.reveal, ta = c.tans, tr = c.teamRes || {}, sc = ST.scoring || {};
   var ok = !!tr.ok;
   B.push(['trres', '<div class="card rescard r-' + (ta ? (ok ? 'ok' : 'no') : 'none') + ' pop">' + teamSt(ST.me.team, 86, 'resstk') + '<div class="rest"><div class="resh">' + (ta ? (ok ? '✔ Багийн хариулт зөв!' : '✗ Багийн хариулт буруу.') : 'Баг хариулт өгөөгүй.') + '</div><div class="ress">' + esc(ok ? cutePick('right', c.stepId + ST.me.team) : cutePick('wrong', c.stepId + ST.me.team)) + '</div></div><div class="respts">' + (c.result && !c.result.none ? '+' + num(c.result.pts) : '0') + '<small>миний</small></div></div>']);
+  funBlock(B, c);
   if (c.result) {
     var r = c.result;
     B.push(['trme', '<div class="card mymini ' + (r.none ? '' : r.ok === true ? 'tint-mint' : 'tint-pink') + '"><b>Миний хувийн хариулт:</b> ' + (r.none ? 'Хариулаагүй' : (r.ok === true ? 'Зөв хариулт.' : 'Буруу хариулт.') + ' · +' + num(r.pts) + ' оноо') + (c.myAnswer ? '<div class="small muted">' + esc(describeAnswer(q, c.myAnswer)) + '</div>' : '') + '</div>']);

@@ -35,6 +35,7 @@ function draw(){if(!ST)return;var p=ST.present,c=ST.cur,h=top(),t=ST.t;
     if(c.q){h+=timer()+qBlock(c.q,t.ph==='rev'?c.reveal:null);
       if(c.kind==='q'&&t.ph==='ind')h+='<div class="muted center">Хариулсан: '+(c.answered||0)+' / '+ST.lobby.total+' · Асуулт '+c.qn+'/'+c.qTotal+'</div>';
       if(t.ph==='rev'&&c.dist)h+='<div class="card" style="margin:0">'+Charts.dist(c.dist)+'</div>';
+      if(t.ph==='rev'&&c.fast&&c.fast.length)h+='<div class="row" style="gap:1.2vw;align-items:center"><span class="muted">⚡ Хамгийн хурдан:</span>'+c.fast.map(function(x,i){return '<span class="tag ok">'+['🥇','🥈','🥉'][i]+' '+esc(x.name)+' · '+x.sec+'с</span>'}).join('')+'</div>';
       if(c.teamsDone)h+='<div class="row">'+c.teamsDone.map(function(d,i){return '<span class="tag '+(d?'ok':'wait')+'">'+(i+1)+'-р баг '+(d?'✓':'…')+'</span>'}).join('')+'</div>';
       if(c.ratings)h+='<div class="row">'+c.ratings.map(function(r){var m={ok:['ok','✅ Зөв'],partial:['mid','🟡 Хэсэгчлэн'],wrong:['no','❌ Буруу']}[r.rating]||['wait','…'];return '<span class="tag '+m[0]+'">'+esc(r.name)+': '+m[1]+'</span>'}).join('')+'</div>'}
     else if(c.teamQs)h+=timer()+teamQs(c);
