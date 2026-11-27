@@ -380,6 +380,7 @@ function teacherView() {
     }
   }
   const out = { t: timerView(), script: scriptView(), stages: stagesView(), settings: publicSettings(), students: stuRows, teams, questions: db.questions, qstats, feed: db.feed.slice(-60), present: db.present, live,
+    roster: db.roster ? { v: db.roster.v, classes: db.roster.classes.length, students: db.roster.classes.reduce((x, c) => x + c.s.length, 0) } : null,
     run: { phase: r.phase, startedAt: r.startedAt || null, finishedAt: r.finishedAt || null }, winBonus: winBonus(), grade5: scaledScoring(), onlineCount: stuRows.filter(x => x.online).length, total: stuRows.length, tunnel: TUN, siteUrl: SITE_URL, firstPw: !!S().pwInitial, join: joinInfo(), code: S().code, chat: db.chat, chatOff: !!r.chatOff, pics: listPics(), charts: chartData(null) };
   // 2-р шатны багийн хариултууд (үнэлгээ хийх)
   const w = r.script.find(x => x.kind === 'write') || (stageQs(2)[0] ? { qid: stageQs(2)[0].id } : null);
@@ -458,17 +459,28 @@ const joinKey = (nm, cls) => (nm + '|' + cls).toLowerCase();
 app.post('/api/join', (req, res) => {
   if (limited(req, 'join', 60, 60000)) return ERR(res, 429, 'Хэт олон оролдлого. Түр хүлээнэ үү.');
   const b = req.body || {};
-  const nm = clean(b.name, 30).replace(/\s+/g, ' '), cls = clean(b.cls, 12).replace(/\s+/g, '').toUpperCase();
+  const nm = clean(b.name, 40).replace(/\s+/g, ' '), cls = clean(b.cls, 20).replace(/\s+/g, '').toUpperCase();
   if (nm.length < 2) return ERR(res, 400, 'Нэрээ бичнэ үү.');
   if (!cls) return ERR(res, 400, 'Ангиа бичнэ үү (жишээ нь 10Д).');
   let s = db.students.find(x => (x.key || joinKey(x.nm || x.name, x.cls || '')) === joinKey(nm, cls));
   if (!s) {
     if (db.students.length >= 300) return ERR(res, 409, 'Сурагчийн тоо хэт олон байна. Багшдаа хэлнэ үү.');
     const c = teamCounts(); const t = c.indexOf(Math.min(...c)) + 1;
-    s = { id: 's' + (Math.max(0, ...db.students.map(x => +x.id.slice(1) || 0)) + 1), name: nm + ' · ' + cls, nm, cls, key: joinKey(nm, cls), team: t, pin: '' };
+    s = { id: 's' + (Math.max(0, ...db.students.map(x => +x.id.slice(1) || 0)) + 1), name: nm + ' · ' + cls, nm, cls, grp: clean(b.grp, 40), key: joinKey(nm, cls), team: t, pin: '' };
     db.students.push(s); feed('✨ ' + s.name + ' шинээр бүртгүүлж ' + teamName(t) + '-д орлоо', 'join');
   }
   issueToken(s, b, res);
+});
+/* ----- нэрсийн жагсаалт (багшийн журналаас): сурагч анги, нэрээ сонгоно ----- */
+// Нэрс GitHub-д биш, зөвхөн энэ серверт хадгалагдана; хичээлийн кодтой хүн л харна.
+function rosterPublic() {
+  const R0 = db.roster; if (!R0 || !Array.isArray(R0.classes)) return [];
+  return R0.classes.map(c => { const seen = {}; return { g: c.g, s: c.s.map(([n, sub]) => { const k = n + '|' + (sub || ''); seen[k] = (seen[k] || 0) + 1; return { n: seen[k] > 1 ? n + ' (' + seen[k] + ')' : n, c: sub || c.g }; }) }; }).filter(c => c.s.length);
+}
+app.get('/api/roster', (req, res) => {
+  if (limited(req, 'roster', 120, 60000)) return ERR(res, 429, 'Хэт олон оролдлого.');
+  if (!codeOk(req.query.code)) return ERR(res, 403, 'Хичээлийн код буруу байна.');
+  res.json({ ok: true, classes: rosterPublic() });
 });
 const stuAuth = (req, res, next) => { const t = req.get('x-token') || ''; const id = db.tokens[t]; const s = id && stu(id); if (!s) return ERR(res, 401, 'Нэвтрэх шаардлагатай.'); req.stu = s; next(); };
 app.get('/api/state', stuAuth, (req, res) => res.json({ ok: true, state: studentView(req.stu) }));
@@ -571,6 +583,9 @@ T.get('/answers', (req, res) => {
 T.post('/grade', (req, res) => { const b = req.body || {}; const a = db.answers[akey(clean(b.sid, 20), clean(b.qid, 10))]; if (!a) return ERR(res, 404, 'Хариулт олдсонгүй.');
   if (b.bonus !== undefined) { const p = +b.bonus; if (!isInt(p, 0, 20)) return ERR(res, 400, 'Бонус 0..20 хооронд байна.'); a.bonus = p; }
   save(); pushSoon(); res.json({ ok: true }); });
+T.post('/roster', (req, res) => { const b = req.body || {}; if (!Array.isArray(b.classes) || b.classes.length > 40) return ERR(res, 400, 'Нэрсийн жагсаалт буруу.');
+  const classes = b.classes.map(c => ({ g: clean(c && c.g, 40), s: (Array.isArray(c && c.s) ? c.s : []).slice(0, 120).map(x => [clean(x && x[0], 40).replace(/\s+/g, ' '), clean(x && x[1], 20)]).filter(x => x[0]) })).filter(c => c.g && c.s.length);
+  db.roster = { v: clean(String(b.v || now()), 20), at: now(), classes }; feed('📋 Нэрсийн жагсаалт шинэчлэгдлээ (' + classes.length + ' анги)', 'sys'); save(); pushAll(); res.json({ ok: true, classes: classes.length, students: classes.reduce((x, c) => x + c.s.length, 0) }); });
 T.get('/images', (q, r) => r.json({ ok: true, pics: listPics() }));
 
 /* ----- teacher: students & teams ----- */
