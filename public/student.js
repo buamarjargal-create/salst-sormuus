@@ -27,7 +27,7 @@ function show(id) {
   document.body.classList.toggle('in', live);
 }
 function err(id, m) { var e = $(id); e.textContent = m || ''; e.classList.toggle('hide', !m); }
-var num = function (x) { x = +x || 0; return Math.round(x * 10) / 10; };
+var num = function (x) { x = +x || 0; return Math.round(x * 100) / 100; };
 var RL = { ok: '✅ Зөв', partial: '🟡 Хэсэгчлэн зөв', wrong: '❌ Буруу' };
 var PAL = ['pink', 'lilac', 'butter', 'mint', 'peach', 'sky'];
 function avatar(name, sz) { return '<span class="av" style="width:' + (sz || 26) + 'px;height:' + (sz || 26) + 'px"><img src="/img/' + pick('all', name) + '.png" alt="" loading="lazy"></span>'; }
@@ -197,7 +197,7 @@ function stagesCard() {
     return '<button type="button" class="tile stgt ' + STAGECLS[g.id] + (open ? ' open' : '') + '" data-act="stg" data-s="' + g.id + '" aria-expanded="' + open + '"><div class="k">' + g.id + '-р шат</div><div class="mt">' + esc(g.icon) + ' ' + esc(g.name) + '</div><div class="stt">' + esc(g.title) + '</div>' + (open ? '<div class="std">' + esc(g.desc) + '<div class="scl">' + scoreChips(g.id) + '</div></div>' : '<div class="more">Дэлгэрэнгүй ›</div>') + '</button>';
   }).join('') + '</div><p class="small muted center mt8">' + esc(scoreLine()) + '</p></div>';
 }
-function scoreLine() { var c = ST.scoring || {}; return 'Зөв хариулт +' + c.ind + ' · Peer Check +' + c.peerHit + '/+' + c.peerNear + ' · Багийн зөв +' + c.teamQ; }
+function scoreLine() { var c = ST.scoring || {}; return 'Нийт ' + num(c.max) + ' оноо (хувийн ' + num(c.maxInd) + ' + багийн ' + num(c.maxTeam) + ') · Зөв хариулт +' + num(c.ind) + ' · Peer Check +' + num(c.peerHit) + '/+' + num(c.peerNear) + ' · Багийн зөв +' + num(c.teamQ); }
 function scoreChips(st) {
   var c = ST.scoring || {}, a = [];
   if (st === 1) a = ['Хувийн зөв +' + c.ind, 'Баг олонхиороо зөв +' + c.teamQ];
@@ -224,9 +224,13 @@ function hud() {
     '<div class="progress"><i id="tbar"></i></div>' +
     '<div class="dotsrow"><div class="dots" aria-label="Алхам">' + dots + '</div><span class="small muted">Алхам ' + (t.step + 1) + '/' + t.stepCount + '</span></div>' +
     '<div id="tnote" class="tnote hide" role="status"></div>' +
-    '<div class="tiles3"><div class="tile pink"><div class="k">Миний оноо</div><div class="v">' + num(s.me.score) + '</div></div>' +
-    '<div class="tile lilac"><div class="k">Багийн байр</div><div class="v">' + (s.team.rank ? s.team.rank + '<small>-р</small>' : '–') + '</div></div>' +
-    '<div class="tile butter"><div class="k">Багийн оноо</div><div class="v">' + num(s.team.score) + '</div></div></div></div>';
+    gradeTiles(s) + '<div class="small muted center mt8">Багийн байр: <b>' + (s.team.rank ? s.team.rank + '-р' : '–') + '</b></div></div>';
+}
+// Хувийн / багийн / нийт оноо: авах (дээд) ба авсан
+function gradeTiles(s) {
+  var g = (s.me && s.me.g) || { indGot: 0, indMax: 0, teamGot: 0, teamMax: 0, total: 0, max: 0 };
+  var tile = function (cls, label, got, max) { return '<div class="tile ' + cls + '"><div class="k">' + label + '</div><div class="v">' + num(got) + '<small>/' + num(max) + '</small></div><div class="gl">Авах: <b>' + num(max) + '</b> · Авсан: <b>' + num(got) + '</b></div></div>'; };
+  return '<div class="tiles3 gtiles">' + tile('lilac', 'Хувийн оноо', g.indGot, g.indMax) + tile('butter', 'Багийн оноо', g.teamGot, g.teamMax) + tile('pink', 'Нийт оноо', g.total, g.max) + '</div>';
 }
 function introCard() {
   var s = ST, t = s.t, g = (s.stages || [])[t.stage - 1]; if (!g) return '';
@@ -486,7 +490,7 @@ function doneBlocks(B) {
     '<div class="rklist">' + board.map(function (b) { return '<div class="rkr' + (b.team === s.me.team ? ' me' : '') + '"><span class="rkn">' + b.rank + '</span>' + teamSt(b.team, 34) + '<div class="rkt"><b>' + esc(b.name) + '</b><span class="small muted">' + (b.accuracy != null ? 'Нарийвчлал ' + b.accuracy + '% · ' : '') + 'Багийн оноо +' + num(b.teamPts) + '</span></div><span class="rks">' + num(b.score) + '</span></div>'; }).join('') + '</div></div>']);
   B.push(['dstack', '<div class="card"><h3>Шат тус бүрийн оноо</h3>' + Charts.stacked(board.map(function (b) { return { name: b.name, color: TEAMCOL[b.team], stages: b.stages || [0, 0, 0, 0, 0], score: num(b.score) }; })) + '</div>']);
   var seenQ = {}, all = (s.all || []).filter(function (a) { if (seenQ[a.id]) return false; seenQ[a.id] = 1; return true; }), okN = all.filter(function (a) { return a.ok === true; }).length;
-  B.push(['dme', '<div class="card"><h3>Миний үр дүн</h3><div class="tiles3"><div class="tile pink"><div class="k">Миний оноо</div><div class="v">' + num(s.me.score) + '</div></div><div class="tile mint"><div class="k">Зөв</div><div class="v">' + okN + '<small>/' + all.length + '</small></div></div><div class="tile lilac"><div class="k">Peer Check</div><div class="v">+' + num(s.me.peer) + '</div></div></div>' +
+  B.push(['dme', '<div class="card"><h3>Миний үр дүн</h3>' + gradeTiles(s) + '<p class="small muted center mt8">Зөв хариулт: <b>' + okN + '/' + all.length + '</b> · Peer Check: <b>+' + num(s.me.peer) + '</b></p>' +
     '<div class="mylist">' + all.map(function (a, i) { var k = a.none ? 'none' : a.ok === true ? 'ok' : a.ok === 'partial' ? 'part' : 'no'; return '<div class="myr m-' + k + '"><span class="stagechip s' + a.stage + '">' + a.stage + '</span><span class="myt">' + esc(a.text) + '</span><span class="mys">' + (a.none ? '—' : a.ok === true ? '✔' : '✗') + ' <b>' + num(a.pts) + '</b></span></div>'; }).join('') + '</div></div>']);
   var ch = s.charts || {};
   if (ch.concepts && ch.concepts.length) B.push(['dcon', '<div class="card"><h3>Ойлголт тус бүрээр (анги даяар)</h3><p class="small muted">Хамгийн сул ойлголт дээрээс нь эхэлж харуулав.</p>' + Charts.hbars(ch.concepts.map(function (x) { return { label: x.name, value: x.pct, color: x.pct >= 70 ? CH.mint : x.pct >= 45 ? CH.butter : CH.pink, text: x.pct + '%' }; }), { max: 100 }) + '</div>']);

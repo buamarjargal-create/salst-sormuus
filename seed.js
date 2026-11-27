@@ -185,7 +185,7 @@ function make() {
     settings: {
       className: '10-р анги', subject: 'Биологи', topic: 'Салст ба сормуус',
       code: 'SALST10', teacherUser: 'AmarjargalBuyanbaatar', teacherHash: '', teacherSalt: '', pwInitial: true,
-      pinEnabled: false, scoreMode: 'avg', autoAdvance: true, chatOn: true, timeMig30: true,
+      pinEnabled: false, scoreMode: 'avg', autoAdvance: true, chatOn: true, timeMig30: true, grade: { ind: 3, team: 2 },
       scoring: Object.assign({}, SCORING), timing: JSON.parse(JSON.stringify(TIMING)), stages: STAGES.map(x => Object.assign({}, x)), areas: AREAS,
       teams: TEAMS.map(t => Object.assign({}, t)),
       discussion: DISCUSSION

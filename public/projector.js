@@ -16,7 +16,7 @@ function opts(q,rv){var good=function(i){if(!rv)return false;return Array.isArra
   return h}
 function qBlock(q,rv){return '<div class="q">'+esc(q.text)+'</div>'+(q.graph?graphSVG(q.graph):'')+(q.image?'<div class="center"><img src="/img/q/'+esc(q.image)+'" alt="" style="max-height:30vh;border-radius:20px;background:#fff;padding:8px"></div>':'')+opts(q,rv)}
 function board(b){var s=b.slice().sort(function(a,c){return a.rank-c.rank});
-  var h='<div class="big">🏆 Багийн үр дүн</div>'+s.map(function(t){return '<div class="lb"><div class="rk">'+t.rank+'</div><div><b>'+esc(t.name)+'</b><div class="muted" style="font-size:.6em">'+esc(t.mission||'')+'</div></div><div class="sc">'+Math.round(t.score)+'</div></div>'}).join('');
+  var h='<div class="big">🏆 Багийн үр дүн</div>'+s.map(function(t){return '<div class="lb"><div class="rk">'+t.rank+'</div><div><b>'+esc(t.name)+'</b><div class="muted" style="font-size:.6em">'+esc(t.mission||'')+'</div></div><div class="sc">'+(Math.round(t.score*100)/100)+'</div></div>'}).join('');
   h+='<div class="card" style="margin:0">'+Charts.stacked(s.map(function(t){return {name:t.name,color:TEAMCOL[t.team],stages:t.stages||[0,0,0,0,0],score:t.score}}))+'</div>';
   return h}
 function lobby(){var j=ST.join||{},h='<div class="big">Сорилтод нэгдэх <span class="float" style="display:inline-block">'+stk('bubble',80)+'</span></div><div class="row" style="gap:3vw">'+(j.qr?'<img class="qr" alt="QR" src="'+j.qr+'">':'')+'<div><div class="muted">QR-ыг уншуулж эсвэл энэ хаягаар орж<br><b>нэр, ангиа</b> бичээрэй</div><div class="muted" style="margin-top:.8em;word-break:break-all;font-size:.75em">'+esc(j.url||'')+'</div></div></div>';

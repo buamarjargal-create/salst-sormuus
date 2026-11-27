@@ -235,3 +235,6 @@ body{overflow-x:hidden}
   .resstk{width:64px}.resh{font-size:1.08rem}
   .hero-title{font-size:2.3rem}
 }
+
+/* 5 онооны хуваарь */
+.gtiles .tile .gl{font-size:.68rem;color:var(--ink2);margin-top:4px;line-height:1.25}.gtiles .tile .gl b{font-weight:800}
