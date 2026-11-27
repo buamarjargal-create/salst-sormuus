@@ -109,7 +109,8 @@ function validateAnswer(q, d) {
   if (q.type === 'multi') return Array.isArray(d.arr) && d.arr.length >= 1 && d.arr.every(v => isInt(v, 0, q.options.length - 1)) && new Set(d.arr).size === d.arr.length ? { arr: d.arr } : null;
   if (q.type === 'tf') return typeof d.v === 'boolean' ? { v: d.v } : null;
   if (q.type === 'order') return perm(d.arr, q.items.length) ? { arr: d.arr } : null;
-  if (q.type === 'match') return perm(d.arr, q.pairs.length) ? { arr: d.arr } : null;
+  // тааруулалт: нэг хариултыг хоёр мөрөнд сонгосон ч илгээж болно (зүгээр л буруу гэж үнэлэгдэнэ)
+  if (q.type === 'match') return Array.isArray(d.arr) && d.arr.length === q.pairs.length && d.arr.every(v => isInt(v, 0, q.pairs.length - 1)) ? { arr: d.arr } : null;
   if (q.type === 'short') { const t = clean(d.text, 900); return t ? { text: t } : null; }
   return null;
 }
@@ -307,6 +308,7 @@ function curView(s) {
     if (ph === 'rev') {
       base.reveal = revealQ(q); base.result = a ? { ok: a.ok, pts: r2(((a.pts || 0) + (a.bonus || 0)) * factors().fI), why: a.why || '' } : { ok: false, pts: 0, none: true };
       base.dist = st.kind === 'q' ? qDist(q) : null;
+      base.fast = fastest(qid, 3); base.streak = streakOf(s.id);
       const mem = members(team); const okN = mem.filter(m => (db.answers[akey(m.id, qid)] || {}).ok === true).length;
       base.teamRes = { okN, of: mem.length, ok: st.kind === 'q' ? (mem.length > 0 && okN * 2 > mem.length) : !!(db.tans[team + '|' + qid] || {}).ok };
       if (st.kind !== 'q') base.tans = teamAnsView(team, qid);
@@ -330,6 +332,10 @@ function curView(s) {
 // Сорилт дуусахад 1-р байрын багийн (тэнцсэн бол бүх 1-р байрын) гишүүн бүрт нэмэх оноо
 const winBonus = () => { const v = S().winBonus; return v === undefined ? 1 : v; };
 function bonusMap(teams) { const m = {}; if (R().phase !== 'done' || !winBonus()) return m; const win = new Set(teams.filter(t => t.rank === 1 && t.members > 0).map(t => t.team)); db.students.forEach(s => { if (win.has(s.team)) m[s.id] = winBonus(); }); return m; }
+// ⚡ Хамгийн хурдан зөв хариулсан 3 сурагч (үр дүнгийн үед)
+function fastest(qid, n) { return Object.values(db.answers).filter(a => a.qid === qid && a.ok === true && a.ms).sort((a, b) => a.ms - b.ms).slice(0, n || 3).map(a => { const s = stu(a.sid); return s ? { name: s.nm || s.name, team: s.team, sec: Math.round(a.ms / 100) / 10 } : null; }).filter(Boolean); }
+// 🔥 Дараалсан зөв хариултын цуваа (үр дүн нь гарсан хувийн асуултуудаар)
+function streakOf(sid) { const r = R(); let cur = 0, best = 0; (r.script || []).forEach(st => { if (!(r.revealed[st.id] || r.phase === 'done')) return; if (!['q', 'duel', 'final'].includes(st.kind)) return; const s0 = stu(sid); const qid = stepQid(st, s0 ? s0.team : 1); const a = db.answers[akey(sid, qid)]; if (a && a.ok === true) { cur++; if (cur > best) best = cur; } else cur = 0; }); return { cur, best }; }
 function studentView(s) {
   const r = R(), tv = timerView(), per = computeScores(true), teams = teamStats(true), mine = per[s.id], myTeam = teams[s.team - 1], bonus = bonusMap(teams)[s.id] || 0;
   const out = { t: tv, script: scriptView(), stages: stagesView(),
@@ -386,7 +392,7 @@ function projectorView() {
   const st = curStep(), ph = phName();
   if (st) {
     const q = qById(st.qid || (st.qids && st.qids[1])); out.cur = { stepId: st.id, stage: st.stage, kind: st.kind, ph, qn: st.kind === 'q' ? stageQs(1).findIndex(x => x.id === st.qid) + 1 : 0, qTotal: stageQs(1).length };
-    if (st.kind === 'q' || st.kind === 'write' || st.kind === 'peer') { if (q) { out.cur.q = publicQ(q, 'projector'); canon(out.cur.q, q); const answered = Object.values(db.answers).filter(a => a.qid === q.id).length; out.cur.answered = st.kind === 'q' ? answered : null; if (ph === 'rev') { out.cur.reveal = revealQ(q); out.cur.dist = st.kind === 'q' ? qDist(q) : null; } } }
+    if (st.kind === 'q' || st.kind === 'write' || st.kind === 'peer') { if (q) { out.cur.q = publicQ(q, 'projector'); canon(out.cur.q, q); const answered = Object.values(db.answers).filter(a => a.qid === q.id).length; out.cur.answered = st.kind === 'q' ? answered : null; if (ph === 'rev') { out.cur.reveal = revealQ(q); out.cur.dist = st.kind === 'q' ? qDist(q) : null; out.cur.fast = st.kind === 'q' ? fastest(q.id, 3) : null; } } }
     else { out.cur.teamQs = [1, 2, 3, 4].map(t => { const qq = qById(stepQid(st, t)); if (!qq) return null; const pq = publicQ(qq, 'projector'); canon(pq, qq); return { team: t, name: teamName(t), q: pq, locked: !!(db.tans[t + '|' + qq.id] || {}).locked, reveal: ph === 'rev' ? revealQ(qq) : null, ok: ph === 'rev' ? !!(db.tans[t + '|' + qq.id] || {}).ok : null }; }); }
     if (st.kind === 'peer' && ph === 'rev') out.cur.ratings = [1, 2, 3, 4].map(t => ({ team: t, name: teamName(t), rating: ratingTruth(t) }));
     if (st.kind === 'write' || st.kind === 'peer') out.cur.teamsDone = [1, 2, 3, 4].map(t => !!db.tans[t + '|' + st.qid]);
