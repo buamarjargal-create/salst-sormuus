@@ -48,6 +48,8 @@ function load() {
   ['tokens', 'tsess', 'answers', 'tans', 'pvotes', 'ratings', 'adjust', 'teamAdjust'].forEach(k => db[k] = db[k] || {});
   db.chat = db.chat || {}; [1, 2, 3, 4].forEach(t => db.chat[t] = db.chat[t] || []);
   db.feed = db.feed || []; db.present = db.present || { kind: null };
+  // нэг удаагийн шилжүүлэлт: хариулах үе бүрт +30 сек, цаг дуусахад автоматаар дараагийн алхам руу шилжинэ
+  if (!db.settings.timeMig30) { const tm = db.settings.timing || {}; Object.keys(tm).forEach(k => Object.keys(tm[k]).forEach(p => { if (p !== 'rev') tm[k][p] = Math.min(900, (+tm[k][p] || 30) + 30); })); db.settings.autoAdvance = true; db.settings.timeMig30 = true; save(true); }
   const R0 = db.run; R0.revealed = R0.revealed || {}; R0.finalMap = R0.finalMap || {}; R0.script = R0.script || [];
 }
 let saveTimer = null;
@@ -169,7 +171,7 @@ function lockTeamAnswers(st) { // 'team' үе дуусахад багийн ха
 }
 function enterPhase() {
   const r = R(), st = curStep(); if (!st) return; const ph = KINDS[st.kind][r.ph];
-  r.paused = false; r.endsAt = now() + phDur(st, ph) * 1000; r.phStart = now();
+  r.paused = false; r.locked = false; r.endsAt = now() + phDur(st, ph) * 1000; r.phStart = now(); // шинэ үе бүр түгжээгүй эхэлнэ
   if (st.kind === 'final' && r.ph === 0) assignFinal(st);
   if (ph === 'rev') { r.revealed[st.id] = true; feed('📣 Үр дүн: ' + stageName(st.stage) + ' · ' + stepLabel(st), 'sys'); }
   else feed('▶ ' + stageName(st.stage) + ' · ' + stepLabel(st) + (ph === 'team' ? ' (багийн хэлэлцүүлэг)' : ''), 'sys');
@@ -183,7 +185,8 @@ function advance() {
   enterPhase();
 }
 function startRun() { const r = R(); r.script = buildScript(); if (!r.script.length) return false; r.phase = 'live'; r.step = 0; r.ph = 0; r.locked = false; r.revealed = {}; r.finalMap = {}; r.startedAt = now(); enterPhase(); return true; }
-function tick() { const r = R(); if (r.phase !== 'live' || r.paused || !r.endsAt) return false; if (now() < r.endsAt) return false; if (!S().autoAdvance && phName() === 'rev') return false; advance(); save(); return true; }
+const GRACE_MS = 1500; // сүүлийн секундэд илгээсэн хариулт сервер дээр хүрэх хугацаа
+function tick() { const r = R(); if (r.phase !== 'live' || r.paused || !r.endsAt) return false; if (now() < r.endsAt + (phName() === 'rev' ? 0 : GRACE_MS)) return false; if (!S().autoAdvance && phName() === 'rev') return false; advance(); save(); return true; }
 
 /* ------------------------------ scoring ------------------------------ */
 const akey = (sid, qid) => sid + '|' + qid;
@@ -436,7 +439,7 @@ app.get('/api/state', stuAuth, (req, res) => res.json({ ok: true, state: student
 function stuPhaseGuard(res, kinds, phs) { const r = R(), st = curStep(); if (r.phase === 'lobby') { ERR(res, 409, 'Сорилт хараахан эхлээгүй байна.'); return null; } if (r.phase !== 'live' || !st) { ERR(res, 409, 'Цаг дууссан.'); return null; }
   if (!kinds.includes(st.kind) || !phs.includes(phName())) { ERR(res, 409, 'Цаг дууссан.'); return null; }
   if (r.paused) { ERR(res, 409, 'Сорилт түр зогссон байна.'); return null; } if (r.locked) { ERR(res, 409, 'Багш хариултыг түгжсэн байна.'); return null; }
-  if (now() > r.endsAt + 1200) { ERR(res, 409, 'Цаг дууссан.'); return null; } return st; }
+  if (now() > r.endsAt + GRACE_MS + 500) { ERR(res, 409, 'Цаг дууссан.'); return null; } return st; }
 app.post('/api/answer', stuAuth, (req, res) => { // хувийн хариулт (1-р шат, 3-р шатны эхний үе)
   const s = req.stu, b = req.body || {}, r = R();
   const q = qById(clean(b.qid, 10)); if (!q) return ERR(res, 404, 'Асуулт олдсонгүй.');
