@@ -5,7 +5,7 @@ function rem(){var t=ST.t;return t.paused?t.left:(t.endsAt?Math.max(0,t.endsAt-(
 var L='АБВГДЕЖЗ';
 var PHN={ind:'Хувийн хариулт',team:'Багийн хэлэлцүүлэг',peer:'Шалгалт',rev:'Хариу ба тайлбар'};
 function stageOf(id){return (ST.stages||[])[id-1]||{}}
-function top(){var c=ST.cur,s=c?stageOf(c.stage):null;return '<div class="top"><span>🫁 САЛСТ ба СОРМУУС · '+esc(ST.cls.name)+' · '+esc(ST.cls.topic)+'</span>'+(s?'<span class="stg">'+esc(s.icon||'')+' '+esc(s.name||'')+' · '+esc(PHN[ST.t.ph]||'')+'</span>':'')+'</div>'}
+function top(){var c=ST.cur,s=c?stageOf(c.stage):null;return '<div class="top"><span>🫁 biologybyamra · '+esc(ST.cls.name)+' · '+esc(ST.cls.topic)+'</span>'+(s?'<span class="stg">'+esc(s.icon||'')+' '+esc(s.name||'')+' · '+esc(PHN[ST.t.ph]||'')+'</span>':'')+'</div>'}
 function timer(){return ST.t.phase==='live'&&ST.t.ph!=='rev'?'<div class="tm"><div class="timer" id="pt">--:--</div></div>':''}
 function opts(q,rv){var good=function(i){if(!rv)return false;return Array.isArray(rv.correct)?rv.correct.indexOf(i)>=0:rv.correct===i},h='';
   if(q.options)h+='<div class="row2">'+q.options.map(function(o,i){return '<div class="optp'+(good(o.i)?' good':'')+'"><b>'+L[i]+'</b><span>'+esc(o.text)+'</span></div>'}).join('')+'</div>';

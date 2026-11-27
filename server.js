@@ -1,5 +1,5 @@
 'use strict';
-// САЛСТ ба СОРМУУС — бодит цагийн сорилт (ENZYME платформ дээр суурилсан). Express + Socket.IO, өгөгдөл data/db.json дотор хадгалагдана.
+// biologybyamra — бодит цагийн сорилт (ENZYME платформ дээр суурилсан). Express + Socket.IO, өгөгдөл data/db.json дотор хадгалагдана.
 const http = require('http'), path = require('path'), fs = require('fs'), crypto = require('crypto');
 const { spawn } = require('child_process');
 const { createApp } = require('./lib/mini');
@@ -642,7 +642,7 @@ T.post('/password', (req, res) => { if (limited(req, 'pw', 10, 600000)) return E
   const n = String(b.next || ''); if (n.length < 8 || n.length > 100) return ERR(res, 400, 'Шинэ нууц үг хамгийн багадаа 8 тэмдэгт байна.'); if (n !== String(b.confirm || '')) return ERR(res, 400, 'Шинэ нууц үг давтахтай таарахгүй байна.');
   S().teacherSalt = rid(16); S().teacherHash = hashPw(n, S().teacherSalt); S().pwInitial = false; const keep = teacherSid(req.headers); Object.keys(db.tsess).forEach(k => { if (k !== keep) delete db.tsess[k]; });
   try { fs.unlinkSync(path.join(DATA_DIR, 'FIRST-PASSWORD.txt')); } catch (e) {} save(true); res.json({ ok: true }); });
-T.get('/backup.json', (req, res) => { res.set({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': 'attachment; filename="salst-sormuus-backup-' + new Date().toISOString().slice(0, 10) + '.json"' }); const copy = JSON.parse(JSON.stringify(db)); copy.tokens = {}; copy.tsess = {}; res.send(JSON.stringify(copy)); });
+T.get('/backup.json', (req, res) => { res.set({ 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': 'attachment; filename="biologybyamra-backup-' + new Date().toISOString().slice(0, 10) + '.json"' }); const copy = JSON.parse(JSON.stringify(db)); copy.tokens = {}; copy.tsess = {}; res.send(JSON.stringify(copy)); });
 T.post('/restore', (req, res) => { const d = req.body && req.body.data; if (!d || !d.settings || !Array.isArray(d.students) || !Array.isArray(d.questions) || !d.run || d.v !== 3) return ERR(res, 400, 'Нөөц файл буруу эсвэл хуучин хувилбарынх байна.'); backup('before-restore'); const keepPw = { h: S().teacherHash, s: S().teacherSalt, i: S().pwInitial }; const sess = db.tsess; db = d; db.settings.teacherHash = d.settings.teacherHash || keepPw.h; db.settings.teacherSalt = d.settings.teacherSalt || keepPw.s; db.settings.pwInitial = keepPw.i === undefined ? false : keepPw.i; db.tokens = {}; db.tsess = sess; ['answers', 'tans', 'pvotes', 'ratings', 'adjust', 'teamAdjust'].forEach(k => db[k] = db[k] || {}); db.chat = db.chat || {}; [1, 2, 3, 4].forEach(t => db.chat[t] = db.chat[t] || []); db.feed = db.feed || []; db.present = db.present || { kind: null }; db.run.revealed = db.run.revealed || {}; db.run.finalMap = db.run.finalMap || {}; db.run.script = db.run.script || []; save(true); pushAll(); res.json({ ok: true }); });
 
 /* ----- teacher: export ----- */
@@ -658,7 +658,7 @@ T.get('/export.csv', (req, res) => {
   teamStats(false).sort((a, b) => a.rank - b.rank).forEach(t => rows.push([t.rank, t.name, t.members, t.score, t.avg, t.teamPts, t.stages[1], t.stages[2], t.stages[3], t.stages[4], t.accuracy, t.avgSec]));
   rows.push([]); rows.push(['БАГИЙН ХАРИУЛТУУД']); rows.push(['Баг', 'Асуулт', 'Хариулт', 'Хэн', 'Үнэлгээ']);
   Object.values(db.tans).forEach(x => { const q = qById(x.qid); rows.push([teamName(x.team), x.qid, q ? describeAnswer(q, x.ans) : '', x.byName || '', x.ok === true ? 'зөв' : x.ok === false ? 'буруу' : (db.ratings[x.team] || '')]); });
-  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="salst-sormuus-results.csv"' });
+  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="biologybyamra-results.csv"' });
   res.send('﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'));
 });
 
@@ -701,7 +701,7 @@ const withCode = u => u + (u.includes('?') ? '&' : '?') + 'c=' + encodeURICompon
 const joinInfo = () => { const pub = SITE_URL || TUN.url || LAN.url; if (!pub) return { url: '', qr: '', kind: 'none' }; return { url: pub, qr: qrFor(withCode(pub)), kind: SITE_URL ? 'site' : TUN.url ? 'tunnel' : 'lan' }; };
 function banner() {
   const pub = SITE_URL || TUN.url;
-  console.log('\n🫁 САЛСТ ба СОРМУУС — ' + S().className + ' бодит цагийн сорилт\n');
+  console.log('\n🫁 biologybyamra — ' + S().className + ' бодит цагийн сорилт\n');
   console.log('Багшийн хаяг (энэ компьютер):  http://localhost:' + PORT + '/teacher');
   console.log('Нэвтрэх нэр:                   ' + S().teacherUser);
   if (global.__firstPw) console.log('Анхны нууц үг:                 ' + global.__firstPw + '   (нэвтэрсний дараа Тохиргоо хэсэгт заавал соль)');

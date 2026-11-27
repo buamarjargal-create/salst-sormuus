@@ -238,3 +238,6 @@ body{overflow-x:hidden}
 
 /* 5 онооны хуваарь */
 .gtiles .tile .gl{font-size:.68rem;color:var(--ink2);margin-top:4px;line-height:1.25}.gtiles .tile .gl b{font-weight:800}
+
+/* урт нэр (biologybyamra) утсанд багтах */
+@media (max-width:420px){body.in #clsPill{display:none}.top .brand{font-size:1rem;gap:6px}}
