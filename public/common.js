@@ -6,7 +6,10 @@ W.fmt=function(ms){ms=Math.max(0,Math.ceil(ms/1000));var m=Math.floor(ms/60),s=m
 W.dna=function(sz){sz=sz||30;return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3c0 8 16 8 16 13S8 21 8 29M24 3c0 8-16 8-16 13s16 5 16 13" fill="none" stroke="#b79df0" stroke-width="2.4" stroke-linecap="round"/><path d="M11 8h10M9.5 16h13M11 24h10" stroke="#f5a3c7" stroke-width="2" stroke-linecap="round"/></svg>'};
 W.toast=function(msg,kind){var t=document.createElement('div');t.className='toast '+(kind||'');t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove()},kind==='bad'?4200:2600)};
 W.api=function(url,opt){opt=opt||{};var h={'Content-Type':'application/json'};if(opt.token)h['x-token']=opt.token;
-  return fetch(url,{method:opt.method||(opt.body?'POST':'GET'),headers:h,body:opt.body?JSON.stringify(opt.body):undefined,credentials:'same-origin'}).then(function(r){return r.json().catch(function(){return {ok:false,err:'Серверийн хариу буруу байна.'}}).then(function(j){j._status=r.status;return j})})};
+  var ac=W.AbortController?new AbortController():null,tm=ac?setTimeout(function(){ac.abort()},15000):null; // хариу ирэхгүй гацахаас сэргийлнэ
+  return fetch(url,{method:opt.method||(opt.body?'POST':'GET'),headers:h,body:opt.body?JSON.stringify(opt.body):undefined,credentials:'same-origin',signal:ac?ac.signal:undefined}).then(function(r){clearTimeout(tm);return r.json().catch(function(){return {ok:false,err:'Серверийн хариу буруу байна.'}}).then(function(j){j._status=r.status;return j})},function(e){clearTimeout(tm);throw e})};
+/* Сайт (Render үнэгүй) хичээлийн дундуур унтахгүй байлгах: хуудас нээлттэй үед 4 минут тутам жижиг хүсэлт илгээнэ */
+setInterval(function(){try{fetch('/api/public',{cache:'no-store'}).catch(function(){})}catch(e){}},240000);
 W.graphSVG=function(g){
   if(!g||!g.series||!g.series.length)return '';
   var w=520,h=290,L=56,R=16,T=34,B=52,xs=[],ymax=0,xmin=1e9,xmax=-1e9;

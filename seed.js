@@ -16,11 +16,12 @@ const TEAMS = [
 const STAGES = [
   { id: 1, icon: '🟣', name: 'Team vs Team', title: 'Багаар өрсөлдөнө', desc: 'Бүх багт Q1–Q6 асуултууд дарааллаар гарна. Багийн гишүүн бүр асуултыг эхлээд өөрөө бодож хариулна. Зөв хариулсан бол +10 оноо авна. Баг олонхиороо зөв хариулбал багийн оноо нэмэгдэнэ.' },
   { id: 2, icon: '🟢', name: 'Peer Check', title: 'Бусдын хариултыг шалгана', desc: 'Баг бүр нэг асуултад багийн нэг хариулт бичнэ. Дараа нь тэр хариултыг өөр баг шалгаж ✅ Зөв, 🟡 Хэсэгчлэн зөв, ❌ Буруу гэж үнэлнэ. Өөрийн багийн хариултыг өөрөө шалгахгүй. Үнэлгээ зөв бол +10, ойролцоо бол +5 оноо.' },
-  { id: 3, icon: '🟡', name: 'Cilia Duel', title: 'Сормуусны тулаан', desc: 'Баг бүрт өөрийн сэдвээр нэг асуулт гарна. Гишүүн бүр эхлээд хувиараа хариулна. Дараа нь 30 секундийн багийн хэлэлцүүлэг эхэлж, баг нэг эцсийн хариулт сонгон түгжинэ. Зөв бол баг +20 оноо.' },
+  { id: 3, icon: '🟡', name: 'Cilia Duel', title: 'Сормуусны тулаан', desc: 'Баг бүрт өөрийн сэдвээр нэг асуулт гарна. Гишүүн бүр эхлээд хувиараа хариулна. Дараа нь 1 минутын багийн хэлэлцүүлэг эхэлж, баг нэг эцсийн хариулт сонгон түгжинэ. Зөв бол баг +20 оноо.' },
   { id: 4, icon: '🟠', name: 'Save Your Team', title: 'Багаа авар!', desc: 'Эцсийн сорилт. Багийн хамгийн сул сэдвээс нэг асуулт гарна. Бүх гишүүн хамтран ярилцаж, нэг багийн хариулт өгнө. Зөв бол баг +20 оноо авч, байраа ахиулах боломжтой.' }
 ];
 const AREAS = ['', 'Салст, салст бүрхүүлэгч эс', 'Сормуус, салстын шат', 'Ханиалга, үрэвсэл, сүрьеэ', 'Сэргийлэх: тамхи, утаа, дадал'];
-const TIMING = { q: { ind: 60, rev: 10 }, write: { team: 120 }, peer: { peer: 80, rev: 15 }, duel: { ind: 45, team: 30, rev: 15 }, final: { team: 90, rev: 20 } };
+// Хариулах үе бүрт +30 секунд нэмсэн (2026-11-27). rev = үр дүн харуулах үе.
+const TIMING = { q: { ind: 90, rev: 10 }, write: { team: 150 }, peer: { peer: 110, rev: 15 }, duel: { ind: 75, team: 60, rev: 15 }, final: { team: 120, rev: 20 } };
 const SCORING = { ind: 10, teamQ: 20, teamPartial: 10, peerHit: 10, peerNear: 5 };
 
 // Шатанд оноох: stage 1..4, slot, area; 3-р шатанд team=1..4, 4-р шатанд area-аар сонгоно. Үлдсэн нь асуултын сан (stage 0).
@@ -184,7 +185,7 @@ function make() {
     settings: {
       className: '10-р анги', subject: 'Биологи', topic: 'Салст ба сормуус',
       code: 'SALST10', teacherUser: 'AmarjargalBuyanbaatar', teacherHash: '', teacherSalt: '', pwInitial: true,
-      pinEnabled: false, scoreMode: 'avg', autoAdvance: false, chatOn: true,
+      pinEnabled: false, scoreMode: 'avg', autoAdvance: true, chatOn: true, timeMig30: true,
       scoring: Object.assign({}, SCORING), timing: JSON.parse(JSON.stringify(TIMING)), stages: STAGES.map(x => Object.assign({}, x)), areas: AREAS,
       teams: TEAMS.map(t => Object.assign({}, t)),
       discussion: DISCUSSION

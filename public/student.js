@@ -332,7 +332,7 @@ function indBlocks(B, c, kind) {
   if (c.answered) {
     B.push(['qdone', '<div class="card qcard tint-mint pop">' + stk(pick('wait', q.id), 64, 'stkc tr') + qHead(c, kind === 'duel' ? 'Хувийн хариулт' : '') +
       '<div class="res ok">✔ Хариулт бүртгэгдлээ.</div><div class="small muted">Таны хариулт:</div><div class="ans">' + esc(describeAnswer(q, c.myAnswer) || '—') + '</div>' +
-      '<p class="small muted mt8">' + (kind === 'duel' ? 'Удахгүй 30 секундийн багийн хэлэлцүүлэг эхэлнэ. Багийнхантайгаа санаагаа хуваалцаарай 💬' : 'Зөв эсэх нь цаг дууссаны дараа гарна. ' + esc(cutePick('wait', q.id))) + '</p></div>']);
+      '<p class="small muted mt8">' + (kind === 'duel' ? 'Удахгүй багийн хэлэлцүүлэг эхэлнэ. Багийнхантайгаа санаагаа хуваалцаарай 💬' : 'Зөв эсэх нь цаг дууссаны дараа гарна. ' + esc(cutePick('wait', q.id))) + '</p></div>']);
   } else {
     initDraft(q, d, null);
     B.push(['qin', '<div class="card qcard">' + stk(pick('science', q.id), 56, 'stkc tr') + qHead(c, kind === 'duel' ? 'Хувийн хариулт' : '') + qBody(q) + inputs(q, dk, d) + whyBox(q, dk, d) +
