@@ -1,4 +1,4 @@
-/* САЛСТ ба СОРМУУС — сурагчийн хуудас (4 шаттай урсгал) */
+/* biologybyamra — сурагчийн хуудас (4 шаттай урсгал) */
 (function () {
 'use strict';
 var $ = function (id) { return document.getElementById(id); };
@@ -35,7 +35,7 @@ function teamSt(t, w, cls) { return stk(TEAMIMG[t] || 'purple', w || 60, cls || 
 function hm(ts) { var d = new Date(ts); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); }
 
 /* ------------------------------ эхлэл ------------------------------ */
-api('/api/public').then(function (j) { if (j && j.className) $('clsPill').textContent = j.className; }).catch(function () {});
+api('/api/public').then(function (j) { if (j && j.className) $('clsPill').textContent = j.className; if (j && j.topic) $('heroKick').textContent = 'Биологи · ' + (j.className || '') + ' · ' + j.topic; }).catch(function () {});
 var savedNm = lsGet('ss_nm'), savedCls = lsGet('ss_cls'); if (savedNm) $('nm').value = savedNm; if (savedCls) $('cls').value = savedCls;
 if (TOKEN) {
   api('/api/state', { token: TOKEN }).then(function (j) { if (j.ok) { start(); apply(j.state); } else { setToken(null); show('s-code'); } })

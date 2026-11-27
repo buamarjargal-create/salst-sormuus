@@ -1,4 +1,4 @@
-/* САЛСТ — багшийн самбар (4 шат, бодит цаг) */
+/* biologybyamra — багшийн самбар (4 шат, бодит цаг) */
 (function () {
 'use strict';
 var $ = function (id) { return document.getElementById(id); };
@@ -103,7 +103,7 @@ function enter(relogin) {
 /* ---------- үндсэн бүтэц ---------- */
 function buildStatic() {
   var nav = TABS.map(function (t) { return '<button class="navb" type="button" data-tab="' + t[0] + '"><span class="ni">' + ico(TABICON[t[0]]) + '</span><span class="nl">' + t[1] + '</span></button>'; }).join('');
-  $('side').innerHTML = '<div class="sbrand"><span class="sdna">' + dna(30) + '</span><div><b>САЛСТ</b><small id="sideCls"></small></div></div>' +
+  $('side').innerHTML = '<div class="sbrand"><span class="sdna">' + dna(30) + '</span><div><b>biologybyamra</b><small id="sideCls"></small></div></div>' +
     '<div class="slabel">ҮНДСЭН ЦЭС</div><div class="snav">' + nav + '</div>' +
     '<div class="sstk">' + stk('lab', 74, 'float') + '</div>' +
     '<div class="sfoot"><a class="navb" href="/projector" target="_blank" rel="noopener"><span class="ni">' + ico('proj') + '</span><span class="nl">Проектор нээх</span></a>' +
@@ -645,7 +645,7 @@ function rResults() {
   var sig = JSON.stringify([s.teams, s.students, s.charts, s.settings.scoreMode, s.t.phase, s.writeAnswers, s.writeQ, s.qstats, s.settings.teams]);
   paint($('main'), 'res', sig, function () {
     var rank = s.teams.slice().sort(function (a, b) { return a.rank - b.rank; });
-    var o = '<div class="printh">САЛСТ ба СОРМУУС · ' + esc(s.settings.className) + ' · ' + esc(s.settings.topic) + ' — дүнгийн хураангуй (' + new Date().toLocaleDateString() + ')</div>';
+    var o = '<div class="printh">biologybyamra · ' + esc(s.settings.className) + ' · ' + esc(s.settings.topic) + ' — дүнгийн хураангуй (' + new Date().toLocaleDateString() + ')</div>';
     o += '<div class="card restool noprint"><div class="taskhead"><div><h2>Дүн ба диаграмм</h2><div class="small muted">' + (s.t.phase === 'done' ? 'Сорилт дууссан — эцсийн дүн.' : s.t.phase === 'live' ? 'Сорилт явагдаж байна — дүн шууд шинэчлэгдэнэ (багшид бүх оноо харагдана).' : 'Сорилт эхлээгүй байна.') + '</div></div><div class="row"><a class="btn" href="/api/t/export.csv">⬇ CSV татах</a><button class="btn" data-r="print">🖨 Хэвлэх</button><button class="btn lilac" data-a="board">📽 Байрыг проектор дээр</button></div></div></div>';
     // багийн жагсаалт: podium tile
     o += '<div class="tiles podium">' + rank.map(function (t) { return '<div class="tile ttile" style="--tc:' + tcol(t.team) + '">' + stk(TEAMIMG[t.team], 42, 'tstk') + '<div class="k">#' + t.rank + ' · ' + esc(t.name) + '</div><div class="v">' + t.score + '<small> / ' + G5(s).max + '</small></div><div class="tsub">Хувийн дундаж ' + t.avg + '/' + G5(s).maxInd + ' · багийн ' + t.teamPts + '/' + G5(s).maxTeam + ' · нарийвчлал ' + t.accuracy + '%</div></div>'; }).join('') + '</div>';
@@ -672,7 +672,7 @@ function donutCard(qid, label, text, ok, no, part, none) {
   var tot = ok + no + part + none, ans = ok + no + part;
   return '<button class="dcard" type="button" data-a="ans" data-q="' + esc(qid) + '">' + Charts.donut([{ value: ok, color: CH.mint }, { value: no, color: CH.rose }, { value: part, color: CH.butter }, { value: none, color: CH.track }], { center: ans ? Math.round(ok / ans * 100) + '%' : '–', sub: 'зөв', size: 112, label: label }) + '<div class="dl"><b>' + esc(label) + '</b><span class="clamp2 small">' + esc(text) + '</span><span class="small muted">✓' + ok + ' ✗' + no + (part ? ' ◐' + part : '') + (none ? ' · ' + none + ' хариулаагүй' : '') + (tot ? '' : ' —') + '</span></div></button>';
 }
-$('main').addEventListener('click', function (ev) { var b = ev.target.closest('[data-r]'); if (!b || TAB !== 'results') return; if (b.dataset.r === 'print') { var old = document.title; document.title = 'Салст ба сормуус ' + ST.settings.className + ' — дүн'; window.print(); document.title = old; } });
+$('main').addEventListener('click', function (ev) { var b = ev.target.closest('[data-r]'); if (!b || TAB !== 'results') return; if (b.dataset.r === 'print') { var old = document.title; document.title = 'biologybyamra ' + ST.settings.className + ' — дүн'; window.print(); document.title = old; } });
 
 /* ================= ЯРИЛЦЛАГА ================= */
 function rDisc() {
