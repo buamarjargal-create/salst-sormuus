@@ -229,7 +229,7 @@ function gradeTiles(s) {
   var g = (s.me && s.me.g) || { indGot: 0, indMax: 0, teamGot: 0, teamMax: 0, total: 0, max: 0 };
   var t = s.team || {}, mode = (s.cls && s.cls.mode) === 'sum';
   return '<div class="tiles3 gtiles">' +
-    '<div class="tile pink"><div class="k">Миний оноо</div><div class="v">' + num(g.indGot) + '<small>/' + num(g.indMax) + '</small></div><div class="gl">Авах: <b>' + num(g.indMax) + '</b> · Авсан: <b>' + num(g.indGot) + '</b></div></div>' +
+    '<div class="tile pink"><div class="k">Миний оноо</div><div class="v">' + num(g.indGot + (g.bonus || 0)) + '<small>/' + num(g.indMax) + '</small></div><div class="gl">Авах: <b>' + num(g.indMax) + '</b> · Авсан: <b>' + num(g.indGot) + '</b>' + (g.bonus ? '<br>🏆 1-р байр: <b>+' + num(g.bonus) + '</b>' : '') + '</div></div>' +
     '<div class="tile butter"><div class="k">Багийн оноо</div><div class="v">' + num(mode ? t.sum : t.avg) + '</div><div class="gl">' + (mode ? 'Гишүүдийн оноог нэмсэн' : 'Гишүүдийн дундаж · нийлбэр <b>' + num(t.sum) + '</b>') + '</div></div>' +
     '<div class="tile lilac"><div class="k">Багийн байр</div><div class="v">' + (t.rank ? t.rank + '<small>-р</small>' : '–') + '</div><div class="gl">' + esc(s.me.teamName || '') + '</div></div></div>';
 }
@@ -483,7 +483,7 @@ function doneBlocks(B) {
   var s = ST, board = (s.board || []).slice().sort(function (a, b) { return a.rank - b.rank || b.score - a.score; });
   var mine = board.filter(function (b) { return b.team === s.me.team; })[0] || {};
   B.push(['dhero', '<div class="card hero center donehero tint-pink">' + '<div class="stkrow">' + stk('dance', 92, 'float') + stk(TEAMIMG[s.me.team] || 'purple', 80, 'float d1') + stk('tongue', 78, 'float d2') + '</div>' +
-    '<h2>Сорилт дууслаа!</h2><div class="cute">' + esc(cutePick('done', s.me.id)) + '</div><p class="muted">Манай баг <b>' + esc(s.me.teamName) + '</b> — <b>' + (mine.rank || '–') + '-р байр</b></p></div>']);
+    '<h2>Сорилт дууслаа!</h2>' + (s.me.bonus ? '<div class="pill butter">🏆 Манай баг 1-р байр — хүн бүрт +' + num(s.me.bonus) + ' оноо!</div>' : '') + '<div class="cute">' + esc(cutePick('done', s.me.id)) + '</div><p class="muted">Манай баг <b>' + esc(s.me.teamName) + '</b> — <b>' + (mine.rank || '–') + '-р байр</b></p></div>']);
   var pod = [board[1], board[0], board[2]].filter(Boolean);
   B.push(['dpod', '<div class="card"><h3>Багуудын эцсийн байр</h3><div class="podium">' + pod.map(function (b) {
     return '<div class="pd pd' + b.rank + (b.team === s.me.team ? ' me' : '') + '">' + teamSt(b.team, b.rank === 1 ? 70 : 56) + '<div class="pdn">' + esc(b.name) + '</div><div class="pdb" style="background:' + TEAMCOL[b.team] + '"><span class="pdr">' + b.rank + '</span><span class="pds">' + num(b.score) + '</span></div></div>';

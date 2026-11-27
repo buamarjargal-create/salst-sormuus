@@ -327,11 +327,14 @@ function curView(s) {
   }
   return base;
 }
+// Сорилт дуусахад 1-р байрын багийн (тэнцсэн бол бүх 1-р байрын) гишүүн бүрт нэмэх оноо
+const winBonus = () => { const v = S().winBonus; return v === undefined ? 1 : v; };
+function bonusMap(teams) { const m = {}; if (R().phase !== 'done' || !winBonus()) return m; const win = new Set(teams.filter(t => t.rank === 1 && t.members > 0).map(t => t.team)); db.students.forEach(s => { if (win.has(s.team)) m[s.id] = winBonus(); }); return m; }
 function studentView(s) {
-  const r = R(), tv = timerView(), per = computeScores(true), teams = teamStats(true), mine = per[s.id], myTeam = teams[s.team - 1];
+  const r = R(), tv = timerView(), per = computeScores(true), teams = teamStats(true), mine = per[s.id], myTeam = teams[s.team - 1], bonus = bonusMap(teams)[s.id] || 0;
   const out = { t: tv, script: scriptView(), stages: stagesView(),
-    me: { id: s.id, name: s.name, team: s.team, teamName: teamName(s.team), mission: (S().teams[s.team - 1] || {}).mission || '', focus: (S().teams[s.team - 1] || {}).focus || '', score: mine.total5, ind: mine.ind5, peer: r2(mine.peer * factors().fI), correct: mine.correct, answers: mine.answers,
-      g: { indGot: mine.ind5, indMax: gradeCfg().ind, teamGot: mine.team5, teamMax: gradeCfg().team, total: mine.total5, max: r2(gradeCfg().ind + gradeCfg().team) } },
+    me: { id: s.id, name: s.name, team: s.team, teamName: teamName(s.team), mission: (S().teams[s.team - 1] || {}).mission || '', focus: (S().teams[s.team - 1] || {}).focus || '', score: r2(mine.total5 + bonus), ind: mine.ind5, bonus, peer: r2(mine.peer * factors().fI), correct: mine.correct, answers: mine.answers,
+      g: { indGot: mine.ind5, indMax: gradeCfg().ind, bonus, winBonus: winBonus(), teamGot: mine.team5, teamMax: gradeCfg().team, total: r2(mine.total5 + bonus), max: r2(gradeCfg().ind + gradeCfg().team) } },
     team: { rank: myTeam.rank, avg: myTeam.avg, sum: myTeam.sum, score: myTeam.score, teamPts: myTeam.teamPts, members: members(s.team).map(x => ({ id: x.id, name: x.name, online: online(x.id), me: x.id === s.id })) },
     cls: { name: S().className, topic: S().topic, mode: S().scoreMode }, scoring: scaledScoring(), chatOn: S().chatOn && !r.chatOff,
     chat: (db.chat[s.team] || []).slice(-80) };
@@ -352,7 +355,7 @@ function chartData(s) { // цаг дууссаны дараах диаграмм
 }
 function teacherView() {
   const r = R(), per = computeScores(false), teams = teamStats(false), st = curStep(), ph = phName();
-  const stuRows = db.students.map(s => { const p = per[s.id]; return { id: s.id, name: s.name, team: s.team, pin: s.pin || '', online: online(s.id), score: p.total5, ind: p.ind5, team5: p.team5, peer: r2(p.peer * factors().fI), correct: p.correct, answers: p.answers }; });
+  const bm = bonusMap(teams); const stuRows = db.students.map(s => { const p = per[s.id], bo = bm[s.id] || 0; return { id: s.id, name: s.name, nm: s.nm || s.name, cls: s.cls || '', team: s.team, pin: s.pin || '', online: online(s.id), score: r2(p.total5 + bo), own: p.total5, bonus: bo, ind: p.ind5, team5: p.team5, peer: r2(p.peer * factors().fI), correct: p.correct, answers: p.answers }; });
   const qstats = {}; const cnt = {};
   Object.values(db.answers).forEach(a => { const c = cnt[a.qid] = cnt[a.qid] || { answered: 0, correct: 0, wrong: 0, pending: 0, partial: 0 }; c.answered++; if (a.ok === true) c.correct++; else if (a.ok === false) c.wrong++; else if (a.ok === 'partial') c.partial++; else c.pending++; });
   db.questions.forEach(q => { qstats[q.id] = Object.assign({ answered: 0, correct: 0, wrong: 0, pending: 0, partial: 0 }, cnt[q.id] || {}, { expected: db.students.length }); });
@@ -371,7 +374,7 @@ function teacherView() {
     }
   }
   const out = { t: timerView(), script: scriptView(), stages: stagesView(), settings: publicSettings(), students: stuRows, teams, questions: db.questions, qstats, feed: db.feed.slice(-60), present: db.present, live,
-    grade5: scaledScoring(), onlineCount: stuRows.filter(x => x.online).length, total: stuRows.length, tunnel: TUN, siteUrl: SITE_URL, firstPw: !!S().pwInitial, join: joinInfo(), code: S().code, chat: db.chat, chatOff: !!r.chatOff, pics: listPics(), charts: chartData(null) };
+    run: { phase: r.phase, startedAt: r.startedAt || null, finishedAt: r.finishedAt || null }, winBonus: winBonus(), grade5: scaledScoring(), onlineCount: stuRows.filter(x => x.online).length, total: stuRows.length, tunnel: TUN, siteUrl: SITE_URL, firstPw: !!S().pwInitial, join: joinInfo(), code: S().code, chat: db.chat, chatOff: !!r.chatOff, pics: listPics(), charts: chartData(null) };
   // 2-р шатны багийн хариултууд (үнэлгээ хийх)
   const w = r.script.find(x => x.kind === 'write') || (stageQs(2)[0] ? { qid: stageQs(2)[0].id } : null);
   if (w) { const q = qById(w.qid); out.writeAnswers = [1, 2, 3, 4].map(t => ({ team: t, ans: teamAnsView(t, w.qid), rating: ratingTruth(t), manual: db.ratings[t] || null, auto: q && db.tans[t + '|' + w.qid] ? autoRate(q, db.tans[t + '|' + w.qid].ans.text) : null })); out.writeQ = { id: q.id, text: q.text, model: q.explanation, keywords: q.keywords || null }; }
@@ -615,6 +618,7 @@ T.post('/settings', (req, res) => { const b = req.body || {}; const s = S();
   if (b.pinEnabled !== undefined) s.pinEnabled = !!b.pinEnabled; if (b.autoAdvance !== undefined) s.autoAdvance = !!b.autoAdvance;
   if (b.scoreMode !== undefined) s.scoreMode = b.scoreMode === 'sum' ? 'sum' : 'avg';
   if (b.chatOn !== undefined) s.chatOn = !!b.chatOn;
+  if (b.winBonus !== undefined) { const v = r2(+b.winBonus); if (!isFinite(v) || v < 0 || v > 5) return ERR(res, 400, '1-р байрны нэмэлт оноо 0..5 байна.'); s.winBonus = v; }
   if (b.grade && typeof b.grade === 'object') { const gi = r2(+b.grade.ind); if (!isFinite(gi) || gi <= 0 || gi > 100) return ERR(res, 400, 'Сурагчийн авах оноо 0-ээс их тоо байна.'); s.grade = { ind: gi, team: 0 }; }
   if (b.scoring && typeof b.scoring === 'object') { for (const k of Object.keys(s.scoring)) if (b.scoring[k] !== undefined) { const v = +b.scoring[k]; if (!isInt(v, 0, 100)) return ERR(res, 400, 'Оноо 0..100 байна.'); s.scoring[k] = v; } }
   if (b.timing && typeof b.timing === 'object') { for (const k of Object.keys(s.timing)) for (const p of Object.keys(s.timing[k])) if (b.timing[k] && b.timing[k][p] !== undefined) { const v = +b.timing[k][p]; if (!isInt(v, 5, 900)) return ERR(res, 400, 'Хугацаа 5..900 секунд байна.'); s.timing[k][p] = v; } }
@@ -654,9 +658,10 @@ T.get('/export.csv', (req, res) => {
   const per = computeScores(false), sc = R().script && R().script.length ? R().script : buildScript(), rows = [];
   const iq = []; sc.forEach(st => { if (st.kind === 'q') iq.push({ st, label: 'Ш1 ' + st.qid, qid: st.qid }); });
   const G = gradeCfg(), F = factors();
-  rows.push(['Сурагч', 'Анги', 'Баг', 'Авсан оноо', 'Авах оноо', 'Тохируулга', 'Зөв', 'Хариулсан', ...iq.map(x => x.label), 'Ш3 хувийн']);
+  const BM = bonusMap(teamStats(false));
+  rows.push(['Сурагч', 'Анги', 'Баг', 'Нийт оноо', 'Өөрийн оноо', '1-р байрны бонус', 'Авах оноо', 'Тохируулга', 'Зөв', 'Хариулсан', ...iq.map(x => x.label), 'Ш3 хувийн']);
   db.students.slice().sort((a, b) => a.team - b.team || a.name.localeCompare(b.name, 'mn')).forEach(s => { const p = per[s.id]; const d = sc.find(x => x.kind === 'duel'); const da = d ? db.answers[akey(s.id, stepQid(d, s.team))] : null;
-    rows.push([s.nm || s.name, s.cls || '', teamName(s.team), p.total5, G.ind, p.adj, p.correct, p.answers, ...iq.map(x => { const a = db.answers[akey(s.id, x.qid)]; return a ? r2(((a.pts || 0) + (a.bonus || 0)) * F.fI) : ''; }), da ? r2((da.pts || 0) * F.fI) : '']); });
+    rows.push([s.nm || s.name, s.cls || '', teamName(s.team), r2(p.total5 + (BM[s.id] || 0)), p.total5, BM[s.id] || 0, G.ind, p.adj, p.correct, p.answers, ...iq.map(x => { const a = db.answers[akey(s.id, x.qid)]; return a ? r2(((a.pts || 0) + (a.bonus || 0)) * F.fI) : ''; }), da ? r2((da.pts || 0) * F.fI) : '']); });
   rows.push([]); rows.push(['БАГИЙН ДҮН']); rows.push(['Байр', 'Баг', 'Гишүүд', 'Багийн оноо', 'Гишүүдийн дундаж', 'Гишүүдийн нийлбэр', 'Ш1', 'Ш2', 'Ш3', 'Ш4', 'Нарийвчлал %', 'Дундаж хариулах хугацаа (сек)']);
   teamStats(false).sort((a, b) => a.rank - b.rank).forEach(t => rows.push([t.rank, t.name, t.members, t.score, t.avg, t.sum, t.stages[1], t.stages[2], t.stages[3], t.stages[4], t.accuracy, t.avgSec]));
   rows.push([]); rows.push(['БАГИЙН ХАРИУЛТУУД']); rows.push(['Баг', 'Асуулт', 'Хариулт', 'Хэн', 'Үнэлгээ']);
