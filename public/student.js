@@ -197,13 +197,11 @@ function stagesCard() {
     return '<button type="button" class="tile stgt ' + STAGECLS[g.id] + (open ? ' open' : '') + '" data-act="stg" data-s="' + g.id + '" aria-expanded="' + open + '"><div class="k">' + g.id + '-р шат</div><div class="mt">' + esc(g.icon) + ' ' + esc(g.name) + '</div><div class="stt">' + esc(g.title) + '</div>' + (open ? '<div class="std">' + esc(g.desc) + '<div class="scl">' + scoreChips(g.id) + '</div></div>' : '<div class="more">Дэлгэрэнгүй ›</div>') + '</button>';
   }).join('') + '</div><p class="small muted center mt8">' + esc(scoreLine()) + '</p></div>';
 }
-function scoreLine() { var c = ST.scoring || {}; return 'Нийт ' + num(c.max) + ' оноо (хувийн ' + num(c.maxInd) + ' + багийн ' + num(c.maxTeam) + ') · Зөв хариулт +' + num(c.ind) + ' · Peer Check +' + num(c.peerHit) + '/+' + num(c.peerNear) + ' · Багийн зөв +' + num(c.teamQ); }
+function scoreLine() { var c = ST.scoring || {}; return 'Хүн бүр өөрийн хариултаар ' + num(c.maxInd) + ' онооноос авна · Зөв хариулт +' + num(c.ind) + ' · Peer Check +' + num(c.peerHit) + '/+' + num(c.peerNear); }
 function scoreChips(st) {
   var c = ST.scoring || {}, a = [];
-  if (st === 1) a = ['Хувийн зөв +' + c.ind, 'Баг олонхиороо зөв +' + c.teamQ];
-  else if (st === 2) a = ['Багийн хариулт зөв +' + c.teamQ + ' · хэсэгчлэн +' + c.teamPartial, 'Таны үнэлгээ таарвал +' + c.peerHit + ' · ойролцоо +' + c.peerNear];
-  else if (st === 3) a = ['Хувийн зөв +' + c.ind, 'Багийн эцсийн хариулт зөв +' + c.teamQ];
-  else a = ['Багийн зөв хариулт +' + c.teamQ];
+  if (st === 2) a = ['Таны үнэлгээ таарвал +' + num(c.peerHit) + ' · ойролцоо +' + num(c.peerNear)];
+  else a = ['Таны зөв хариулт +' + num(c.ind)];
   return a.map(function (x) { return '<span class="pill white">' + esc(x) + '</span>'; }).join('');
 }
 
@@ -224,13 +222,16 @@ function hud() {
     '<div class="progress"><i id="tbar"></i></div>' +
     '<div class="dotsrow"><div class="dots" aria-label="Алхам">' + dots + '</div><span class="small muted">Алхам ' + (t.step + 1) + '/' + t.stepCount + '</span></div>' +
     '<div id="tnote" class="tnote hide" role="status"></div>' +
-    gradeTiles(s) + '<div class="small muted center mt8">Багийн байр: <b>' + (s.team.rank ? s.team.rank + '-р' : '–') + '</b></div></div>';
+    gradeTiles(s) + '</div>';
 }
 // Хувийн / багийн / нийт оноо: авах (дээд) ба авсан
 function gradeTiles(s) {
   var g = (s.me && s.me.g) || { indGot: 0, indMax: 0, teamGot: 0, teamMax: 0, total: 0, max: 0 };
-  var tile = function (cls, label, got, max) { return '<div class="tile ' + cls + '"><div class="k">' + label + '</div><div class="v">' + num(got) + '<small>/' + num(max) + '</small></div><div class="gl">Авах: <b>' + num(max) + '</b> · Авсан: <b>' + num(got) + '</b></div></div>'; };
-  return '<div class="tiles3 gtiles">' + tile('lilac', 'Хувийн оноо', g.indGot, g.indMax) + tile('butter', 'Багийн оноо', g.teamGot, g.teamMax) + tile('pink', 'Нийт оноо', g.total, g.max) + '</div>';
+  var t = s.team || {}, mode = (s.cls && s.cls.mode) === 'sum';
+  return '<div class="tiles3 gtiles">' +
+    '<div class="tile pink"><div class="k">Миний оноо</div><div class="v">' + num(g.indGot) + '<small>/' + num(g.indMax) + '</small></div><div class="gl">Авах: <b>' + num(g.indMax) + '</b> · Авсан: <b>' + num(g.indGot) + '</b></div></div>' +
+    '<div class="tile butter"><div class="k">Багийн оноо</div><div class="v">' + num(mode ? t.sum : t.avg) + '</div><div class="gl">' + (mode ? 'Гишүүдийн оноог нэмсэн' : 'Гишүүдийн дундаж · нийлбэр <b>' + num(t.sum) + '</b>') + '</div></div>' +
+    '<div class="tile lilac"><div class="k">Багийн байр</div><div class="v">' + (t.rank ? t.rank + '<small>-р</small>' : '–') + '</div><div class="gl">' + esc(s.me.teamName || '') + '</div></div></div>';
 }
 function introCard() {
   var s = ST, t = s.t, g = (s.stages || [])[t.stage - 1]; if (!g) return '';
@@ -251,7 +252,7 @@ function liveBlocks(B) {
   else if (k === 'write') writeBlocks(B, c);
   else if (k === 'peer' && ph === 'peer') peerBlocks(B, c);
   else if (k === 'peer' && ph === 'rev') peerRevBlocks(B, c);
-  else if (k === 'duel' && ph === 'ind') indBlocks(B, c, 'duel');
+  else if ((k === 'duel' || k === 'final') && ph === 'ind') indBlocks(B, c, k);
   else if ((k === 'duel' || k === 'final') && ph === 'team') teamBlocks(B, c, k);
   else if ((k === 'duel' || k === 'final') && ph === 'rev') teamRevBlocks(B, c, k);
   else B.push(['wait', waitCard('Түр хүлээнэ үү…')]);
@@ -334,12 +335,12 @@ function teamProg(n, of, label) {
 function indBlocks(B, c, kind) {
   var q = c.q, dk = 'I|' + c.stepId + '|' + q.id, d = D(dk);
   if (c.answered) {
-    B.push(['qdone', '<div class="card qcard tint-mint pop">' + stk(pick('wait', q.id), 64, 'stkc tr') + qHead(c, kind === 'duel' ? 'Хувийн хариулт' : '') +
+    B.push(['qdone', '<div class="card qcard tint-mint pop">' + stk(pick('wait', q.id), 64, 'stkc tr') + qHead(c, kind !== 'q' ? 'Хувийн хариулт' : '') +
       '<div class="res ok">✔ Хариулт бүртгэгдлээ.</div><div class="small muted">Таны хариулт:</div><div class="ans">' + esc(describeAnswer(q, c.myAnswer) || '—') + '</div>' +
-      '<p class="small muted mt8">' + (kind === 'duel' ? 'Удахгүй багийн хэлэлцүүлэг эхэлнэ. Багийнхантайгаа санаагаа хуваалцаарай 💬' : 'Зөв эсэх нь цаг дууссаны дараа гарна. ' + esc(cutePick('wait', q.id))) + '</p></div>']);
+      '<p class="small muted mt8">' + (kind !== 'q' ? 'Удахгүй багийн хэлэлцүүлэг эхэлнэ. Багийнхантайгаа санаагаа хуваалцаарай 💬' : 'Зөв эсэх нь цаг дууссаны дараа гарна. ' + esc(cutePick('wait', q.id))) + '</p></div>']);
   } else {
     initDraft(q, d, null);
-    B.push(['qin', '<div class="card qcard">' + stk(pick('science', q.id), 56, 'stkc tr') + qHead(c, kind === 'duel' ? 'Хувийн хариулт' : '') + qBody(q) + inputs(q, dk, d) + whyBox(q, dk, d) +
+    B.push(['qin', '<div class="card qcard">' + stk(pick('science', q.id), 56, 'stkc tr') + qHead(c, kind !== 'q' ? 'Хувийн хариулт' : '') + qBody(q) + inputs(q, dk, d) + whyBox(q, dk, d) +
       '<p class="tuonly err">⌛ Цаг дууссан.</p>' + sendBtn(dk, 'send', 'Хариулт илгээх') + '<p class="small muted center mt8">Илгээсний дараа өөрчлөх боломжгүй.</p></div>']);
   }
   if (c.teamSize) B.push(['tprog', teamProg(c.teamAnswered, c.teamSize, 'Багаас хариулсан')]);
@@ -376,7 +377,7 @@ function distCard(d, q, my) {
 function teamResCard(tr) {
   var p = tr.of ? Math.round(tr.okN / tr.of * 100) : 0, sc = ST.scoring || {};
   return '<div class="card tres ' + (tr.ok ? 'tint-mint' : 'tint-lilac') + '">' + teamSt(ST.me.team, 64, 'stkc tr') + '<div class="k small muted">Багийн үр дүн</div><h3>' + esc(ST.me.teamName) + ': ' + tr.okN + '/' + tr.of + ' зөв</h3><div class="progress"><i style="width:' + p + '%"></i></div>' +
-    '<p class="mt8"><b>' + (tr.ok ? 'Олонх нь зөв хариуллаа — баг +' + sc.teamQ + ' оноо 🎉' : 'Олонх нь зөв хариулаагүй тул багийн оноо нэмэгдсэнгүй.') + '</b></p><p class="small muted">' + esc(cutePick('team', 'tr' + ST.t.stepId)) + '</p></div>';
+    '<p class="mt8"><b>' + (tr.ok ? 'Багийн олонх нь зөв хариуллаа 🎉' : 'Олонх нь зөв хариулаагүй — тайлбарыг хамт уншъя 🌼') + '</b></p><p class="small muted">' + esc(cutePick('team', 'tr' + ST.t.stepId)) + '</p></div>';
 }
 function boardCard() {
   var b = (ST.board || []).slice().sort(function (x, y) { return x.team - y.team; });
@@ -429,7 +430,7 @@ function peerRevBlocks(B, c) {
   var tot = (v.ok || 0) + (v.partial || 0) + (v.wrong || 0);
   var donut = Charts.donut([{ label: 'Зөв', value: v.ok || 0, color: CH.mint }, { label: 'Хэсэгчлэн', value: v.partial || 0, color: CH.butter }, { label: 'Буруу', value: v.wrong || 0, color: CH.rose }], { center: tot, sub: 'санал', size: 140, label: 'Манай багийн хариултад өгсөн санал' }) +
     Charts.legend([{ label: 'Зөв', value: v.ok || 0, color: CH.mint }, { label: 'Хэсэгчлэн', value: v.partial || 0, color: CH.butter }, { label: 'Буруу', value: v.wrong || 0, color: CH.rose }]);
-  B.push(['prmine', '<div class="card prmine ' + (rating === 'ok' ? 'tint-mint' : rating === 'partial' ? 'tint-butter' : 'tint-pink') + ' pop">' + teamSt(ST.me.team, 64, 'stkc tr') + '<div class="k small muted">Манай багийн хариулт хэрхэн үнэлэгдсэн</div><h3>' + (rating ? esc(RL[rating]) : 'Үнэлгээ гараагүй') + (tp ? ' · баг +' + tp : '') + '</h3>' +
+  B.push(['prmine', '<div class="card prmine ' + (rating === 'ok' ? 'tint-mint' : rating === 'partial' ? 'tint-butter' : 'tint-pink') + ' pop">' + teamSt(ST.me.team, 64, 'stkc tr') + '<div class="k small muted">Манай багийн хариулт хэрхэн үнэлэгдсэн</div><h3>' + (rating ? esc(RL[rating]) : 'Үнэлгээ гараагүй') + '' + '</h3>' +
     '<div class="distw"><div class="dd">' + donut + '</div><div class="db">' + (c.myTeamAns && c.myTeamAns.text ? '<div class="small muted">Манай хариулт:</div><div class="ans">' + esc(c.myTeamAns.text) + '</div>' : '<p class="muted">Манай баг хариулт хадгалаагүй байсан.</p>') + '</div></div></div>']);
   var p = c.myPts || 0, mv = c.myVote ? c.myVote.vote : null;
   B.push(['prme', '<div class="card rescard r-' + (p >= (sc.peerHit || 10) ? 'ok' : p > 0 ? 'part' : mv ? 'no' : 'none') + '">' + stk(p > 0 ? pick('happy', 'p' + ST.me.id) : pick('sad', 'p' + ST.me.id), 86, 'resstk') +
@@ -444,7 +445,7 @@ function teamBlocks(B, c, kind) {
   if (kind === 'final') {
     B.push(['fwhy', '<div class="card tint-peach">' + stk('strawberry', 62, 'stkc tr') + '<h3>Яагаад энэ асуулт?</h3><p>Энэ асуулт <b>таны багийн өмнөх хариултуудаас хамгийн сул гарсан сэдэв</b>' + (q.concept ? ' — «' + esc(q.concept) + '»' : '') + ' дээр тулгуурласан. Багаараа хамтдаа ярилцаж, нэг хариулт сонгоод багаа авраарай! 💪</p></div>']);
   }
-  if (kind === 'duel' && c.picks) {
+  if (c.picks) {
     var g = {}, order = [], miss = [];
     c.picks.forEach(function (p) { if (!p.answered) { miss.push(p.name); return; } if (!g[p.desc]) { g[p.desc] = []; order.push(p.desc); } g[p.desc].push(p.name); });
     order.sort(function (x, y) { return g[y].length - g[x].length; });
@@ -462,13 +463,13 @@ function teamBlocks(B, c, kind) {
     (ta && ta.desc ? '<div class="res pend">💡 Санал: ' + esc(ta.desc) + ' · ' + esc(ta.by || '') + '</div>' : '') + inputs(q, dk, d) +
     '<p class="tuonly err">⌛ Цаг дууссан.</p>' + sendBtn(dk, 'tlock', '🔒 Эцсийн хариулт сонгож түгжих') +
     '<div class="btnrow mt8"><button type="button" class="btn lilac sendbtn' + (inflight[dk + 'tprop'] ? ' busy' : '') + '" data-act="tprop" data-d="' + esc(dk) + '">💡 Санал болгох</button><button type="button" class="btn butter chatcta" data-act="chat">💬 Чат</button></div>' +
-    '<p class="small muted center mt8">Түгжсэний дараа өөрчлөх боломжгүй. Түгжээгүй бол цаг дуусахад ' + (kind === 'duel' ? 'санал эсвэл олонхийн хариулт' : 'хамгийн сүүлийн санал') + ' сонгогдоно.</p></div>']);
+    '<p class="small muted center mt8">Түгжсэний дараа өөрчлөх боломжгүй. Түгжээгүй бол цаг дуусахад ' + 'санал эсвэл олонхийн хариулт' + ' сонгогдоно.</p></div>']);
 }
 function teamRevBlocks(B, c, kind) {
   var q = c.q, rv = c.reveal, ta = c.tans, tr = c.teamRes || {}, sc = ST.scoring || {};
   var ok = !!tr.ok;
-  B.push(['trres', '<div class="card rescard r-' + (ta ? (ok ? 'ok' : 'no') : 'none') + ' pop">' + teamSt(ST.me.team, 86, 'resstk') + '<div class="rest"><div class="resh">' + (ta ? (ok ? '✔ Багийн хариулт зөв!' : '✗ Багийн хариулт буруу.') : 'Баг хариулт өгөөгүй.') + '</div><div class="ress">' + esc(ok ? cutePick('right', c.stepId + ST.me.team) : cutePick('wrong', c.stepId + ST.me.team)) + '</div></div><div class="respts">' + (ok ? '+' + sc.teamQ : '0') + '<small>баг</small></div></div>']);
-  if (kind === 'duel' && c.result) {
+  B.push(['trres', '<div class="card rescard r-' + (ta ? (ok ? 'ok' : 'no') : 'none') + ' pop">' + teamSt(ST.me.team, 86, 'resstk') + '<div class="rest"><div class="resh">' + (ta ? (ok ? '✔ Багийн хариулт зөв!' : '✗ Багийн хариулт буруу.') : 'Баг хариулт өгөөгүй.') + '</div><div class="ress">' + esc(ok ? cutePick('right', c.stepId + ST.me.team) : cutePick('wrong', c.stepId + ST.me.team)) + '</div></div><div class="respts">' + (c.result && !c.result.none ? '+' + num(c.result.pts) : '0') + '<small>миний</small></div></div>']);
+  if (c.result) {
     var r = c.result;
     B.push(['trme', '<div class="card mymini ' + (r.none ? '' : r.ok === true ? 'tint-mint' : 'tint-pink') + '"><b>Миний хувийн хариулт:</b> ' + (r.none ? 'Хариулаагүй' : (r.ok === true ? 'Зөв хариулт.' : 'Буруу хариулт.') + ' · +' + num(r.pts) + ' оноо') + (c.myAnswer ? '<div class="small muted">' + esc(describeAnswer(q, c.myAnswer)) + '</div>' : '') + '</div>']);
   }
@@ -487,7 +488,7 @@ function doneBlocks(B) {
   B.push(['dpod', '<div class="card"><h3>Багуудын эцсийн байр</h3><div class="podium">' + pod.map(function (b) {
     return '<div class="pd pd' + b.rank + (b.team === s.me.team ? ' me' : '') + '">' + teamSt(b.team, b.rank === 1 ? 70 : 56) + '<div class="pdn">' + esc(b.name) + '</div><div class="pdb" style="background:' + TEAMCOL[b.team] + '"><span class="pdr">' + b.rank + '</span><span class="pds">' + num(b.score) + '</span></div></div>';
   }).join('') + '</div>' +
-    '<div class="rklist">' + board.map(function (b) { return '<div class="rkr' + (b.team === s.me.team ? ' me' : '') + '"><span class="rkn">' + b.rank + '</span>' + teamSt(b.team, 34) + '<div class="rkt"><b>' + esc(b.name) + '</b><span class="small muted">' + (b.accuracy != null ? 'Нарийвчлал ' + b.accuracy + '% · ' : '') + 'Багийн оноо +' + num(b.teamPts) + '</span></div><span class="rks">' + num(b.score) + '</span></div>'; }).join('') + '</div></div>']);
+    '<div class="rklist">' + board.map(function (b) { return '<div class="rkr' + (b.team === s.me.team ? ' me' : '') + '"><span class="rkn">' + b.rank + '</span>' + teamSt(b.team, 34) + '<div class="rkt"><b>' + esc(b.name) + '</b><span class="small muted">' + (b.accuracy != null ? 'Нарийвчлал ' + b.accuracy + '% · ' : '') + b.members + ' гишүүн · дундаж ' + num(b.avg) + '</span></div><span class="rks">' + num(b.score) + '</span></div>'; }).join('') + '</div></div>']);
   B.push(['dstack', '<div class="card"><h3>Шат тус бүрийн оноо</h3>' + Charts.stacked(board.map(function (b) { return { name: b.name, color: TEAMCOL[b.team], stages: b.stages || [0, 0, 0, 0, 0], score: num(b.score) }; })) + '</div>']);
   var seenQ = {}, all = (s.all || []).filter(function (a) { if (seenQ[a.id]) return false; seenQ[a.id] = 1; return true; }), okN = all.filter(function (a) { return a.ok === true; }).length;
   B.push(['dme', '<div class="card"><h3>Миний үр дүн</h3>' + gradeTiles(s) + '<p class="small muted center mt8">Зөв хариулт: <b>' + okN + '/' + all.length + '</b> · Peer Check: <b>+' + num(s.me.peer) + '</b></p>' +
