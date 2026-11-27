@@ -50,7 +50,10 @@ function load() {
   db.feed = db.feed || []; db.present = db.present || { kind: null };
   // нэг удаагийн шилжүүлэлт: хариулах үе бүрт +30 сек, цаг дуусахад автоматаар дараагийн алхам руу шилжинэ
   if (!db.settings.timeMig30) { const tm = db.settings.timing || {}; Object.keys(tm).forEach(k => Object.keys(tm[k]).forEach(p => { if (p !== 'rev') tm[k][p] = Math.min(900, (+tm[k][p] || 30) + 30); })); db.settings.autoAdvance = true; db.settings.timeMig30 = true; save(true); }
-  if (!db.settings.grade) db.settings.grade = { ind: 3, team: 2 }; // сурагч бүрийн нийт 5 оноо = хувийн 3 + багийн 2
+  // Сурагч бүрийн оноо = зөвхөн өөрийн хийсэн ажил (5-аас). Багийн нийт оноо = гишүүдийн оноогоор.
+  if (!db.settings.gradeIndOnly) { db.settings.grade = { ind: 5, team: 0 }; db.settings.gradeIndOnly = true;
+    const tm = db.settings.timing = db.settings.timing || {}; tm.final = Object.assign({ ind: 75 }, tm.final || {});
+    const s4 = (db.settings.stages || [])[3]; if (s4) s4.desc = 'Эцсийн сорилт. Багийн хамгийн сул сэдвээс нэг асуулт гарна. Гишүүн бүр эхлээд өөрөө хариулна (энэ нь таны оноо), дараа нь багаараа ярилцаж нэг хариулт түгжинэ.'; save(true); }
   const R0 = db.run; R0.revealed = R0.revealed || {}; R0.finalMap = R0.finalMap || {}; R0.script = R0.script || [];
 }
 let saveTimer = null;
@@ -126,7 +129,7 @@ function describeAnswer(q, a) {
 const sameAns = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /* ------------------------------ script (шат, үе) ------------------------------ */
-const KINDS = { q: ['ind', 'rev'], write: ['team'], peer: ['peer', 'rev'], duel: ['ind', 'team', 'rev'], final: ['team', 'rev'] };
+const KINDS = { q: ['ind', 'rev'], write: ['team'], peer: ['peer', 'rev'], duel: ['ind', 'team', 'rev'], final: ['ind', 'team', 'rev'] };
 const stageQs = st => db.questions.filter(q => q.active && q.stage === st).sort((a, b) => a.slot - b.slot || a.order - b.order);
 function buildScript() {
   const sc = [];
@@ -161,7 +164,7 @@ function assignFinal(st) {
 function lockTeamAnswers(st) { // 'team' үе дуусахад багийн хариултуудыг түгжинэ
   for (let t = 1; t <= 4; t++) {
     const qid = stepQid(st, t); const q = qById(qid); if (!q) continue; const key = t + '|' + qid; let ta = db.tans[key];
-    if (!ta && st.kind === 'duel') { // түгжээгүй бол гишүүдийн олонхийн хариулт
+    if (!ta && (st.kind === 'duel' || st.kind === 'final')) { // түгжээгүй бол гишүүдийн олонхийн хариулт
       const cnt = new Map(); members(t).forEach(m => { const a = db.answers[akey(m.id, qid)]; if (a) { const k = JSON.stringify(a.ans); const e = cnt.get(k) || { n: 0, ans: a.ans }; e.n++; cnt.set(k, e); } });
       let best = null; cnt.forEach(e => { if (!best || e.n > best.n) best = e; });
       if (best) { ta = db.tans[key] = { team: t, qid, ans: best.ans, by: null, byName: 'Автомат (олонх)', t: now(), locked: true, auto: true }; }
@@ -216,7 +219,7 @@ function rawMax() { // анхны (дотоод) оноогоор бүх сор�
     if (st.kind === 'q') { const q = qById(st.qid); if (q && q.type !== 'short') ind += sc.ind; team += sc.teamQ; }
     else if (st.kind === 'peer') { ind += sc.peerHit; team += sc.teamQ; }
     else if (st.kind === 'duel') { ind += sc.ind; team += sc.teamQ; }
-    else if (st.kind === 'final') team += sc.teamQ;
+    else if (st.kind === 'final') { ind += sc.ind; team += sc.teamQ; }
   });
   return { ind, team };
 }
@@ -300,7 +303,7 @@ function curView(s) {
     if (st.kind === 'final') { base.area = st['area' + team] || team; base.areaName = S().areas[base.area] || ''; }
     const a = db.answers[akey(s.id, qid)]; base.answered = !!a; if (a) base.myAnswer = a.ans;
     if (st.kind !== 'q' && ph !== 'ind') { base.tans = teamAnsView(team, qid); }
-    if (st.kind === 'duel' && ph !== 'ind') base.picks = teamPicks(team, qid);
+    if ((st.kind === 'duel' || st.kind === 'final') && ph !== 'ind') base.picks = teamPicks(team, qid);
     if (ph === 'rev') {
       base.reveal = revealQ(q); base.result = a ? { ok: a.ok, pts: r2(((a.pts || 0) + (a.bonus || 0)) * factors().fI), why: a.why || '' } : { ok: false, pts: 0, none: true };
       base.dist = st.kind === 'q' ? qDist(q) : null;
@@ -468,7 +471,7 @@ app.post('/api/answer', stuAuth, (req, res) => { // хувийн хариулт 
   const s = req.stu, b = req.body || {}, r = R();
   const q = qById(clean(b.qid, 10)); if (!q) return ERR(res, 404, 'Асуулт олдсонгүй.');
   const key = akey(s.id, q.id); if (db.answers[key]) return res.json({ ok: true, dup: true, msg: 'Та энэ асуултад аль хэдийн хариулсан байна.' });
-  const st = stuPhaseGuard(res, ['q', 'duel'], ['ind']); if (!st) return;
+  const st = stuPhaseGuard(res, ['q', 'duel', 'final'], ['ind']); if (!st) return;
   if (stepQid(st, s.team) !== q.id) return ERR(res, 404, 'Энэ асуулт одоо нээлттэй биш байна.');
   const ans = validateAnswer(q, b.answer); if (!ans || q.type === 'short') return ERR(res, 400, 'Хариултаа бүрэн бөглөнө үү.');
   const g = gradeAnswer(q, ans);
@@ -612,7 +615,7 @@ T.post('/settings', (req, res) => { const b = req.body || {}; const s = S();
   if (b.pinEnabled !== undefined) s.pinEnabled = !!b.pinEnabled; if (b.autoAdvance !== undefined) s.autoAdvance = !!b.autoAdvance;
   if (b.scoreMode !== undefined) s.scoreMode = b.scoreMode === 'sum' ? 'sum' : 'avg';
   if (b.chatOn !== undefined) s.chatOn = !!b.chatOn;
-  if (b.grade && typeof b.grade === 'object') { const gi = r2(+b.grade.ind), gt = r2(+b.grade.team); if (!isFinite(gi) || !isFinite(gt) || gi < 0 || gt < 0 || gi + gt <= 0 || gi + gt > 100) return ERR(res, 400, 'Хувийн ба багийн оноо 0-ээс их тоо байна.'); s.grade = { ind: gi, team: gt }; }
+  if (b.grade && typeof b.grade === 'object') { const gi = r2(+b.grade.ind); if (!isFinite(gi) || gi <= 0 || gi > 100) return ERR(res, 400, 'Сурагчийн авах оноо 0-ээс их тоо байна.'); s.grade = { ind: gi, team: 0 }; }
   if (b.scoring && typeof b.scoring === 'object') { for (const k of Object.keys(s.scoring)) if (b.scoring[k] !== undefined) { const v = +b.scoring[k]; if (!isInt(v, 0, 100)) return ERR(res, 400, 'Оноо 0..100 байна.'); s.scoring[k] = v; } }
   if (b.timing && typeof b.timing === 'object') { for (const k of Object.keys(s.timing)) for (const p of Object.keys(s.timing[k])) if (b.timing[k] && b.timing[k][p] !== undefined) { const v = +b.timing[k][p]; if (!isInt(v, 5, 900)) return ERR(res, 400, 'Хугацаа 5..900 секунд байна.'); s.timing[k][p] = v; } }
   if (Array.isArray(b.teams)) b.teams.forEach((t, i) => { if (s.teams[i]) { if (t.name !== undefined) s.teams[i].name = clean(t.name, 40) || s.teams[i].name; if (t.mission !== undefined) s.teams[i].mission = clean(t.mission, 80); if (t.focus !== undefined) s.teams[i].focus = clean(t.focus, 300); } });
@@ -651,11 +654,11 @@ T.get('/export.csv', (req, res) => {
   const per = computeScores(false), sc = R().script && R().script.length ? R().script : buildScript(), rows = [];
   const iq = []; sc.forEach(st => { if (st.kind === 'q') iq.push({ st, label: 'Ш1 ' + st.qid, qid: st.qid }); });
   const G = gradeCfg(), F = factors();
-  rows.push(['Сурагч', 'Анги', 'Баг', 'Нийт авсан оноо', 'Нийт авах оноо', 'Хувийн авсан', 'Хувийн авах', 'Багийн авсан', 'Багийн авах', 'Тохируулга', 'Зөв', 'Хариулсан', ...iq.map(x => x.label), 'Ш3 хувийн']);
+  rows.push(['Сурагч', 'Анги', 'Баг', 'Авсан оноо', 'Авах оноо', 'Тохируулга', 'Зөв', 'Хариулсан', ...iq.map(x => x.label), 'Ш3 хувийн']);
   db.students.slice().sort((a, b) => a.team - b.team || a.name.localeCompare(b.name, 'mn')).forEach(s => { const p = per[s.id]; const d = sc.find(x => x.kind === 'duel'); const da = d ? db.answers[akey(s.id, stepQid(d, s.team))] : null;
-    rows.push([s.nm || s.name, s.cls || '', teamName(s.team), p.total5, r2(G.ind + G.team), p.ind5, G.ind, p.team5, G.team, p.adj, p.correct, p.answers, ...iq.map(x => { const a = db.answers[akey(s.id, x.qid)]; return a ? r2(((a.pts || 0) + (a.bonus || 0)) * F.fI) : ''; }), da ? r2((da.pts || 0) * F.fI) : '']); });
-  rows.push([]); rows.push(['БАГИЙН ДҮН']); rows.push(['Байр', 'Баг', 'Гишүүд', 'Нийт оноо (5-аас)', 'Дундаж хувийн оноо', 'Багийн оноо', 'Ш1', 'Ш2', 'Ш3', 'Ш4', 'Нарийвчлал %', 'Дундаж хариулах хугацаа (сек)']);
-  teamStats(false).sort((a, b) => a.rank - b.rank).forEach(t => rows.push([t.rank, t.name, t.members, t.score, t.avg, t.teamPts, t.stages[1], t.stages[2], t.stages[3], t.stages[4], t.accuracy, t.avgSec]));
+    rows.push([s.nm || s.name, s.cls || '', teamName(s.team), p.total5, G.ind, p.adj, p.correct, p.answers, ...iq.map(x => { const a = db.answers[akey(s.id, x.qid)]; return a ? r2(((a.pts || 0) + (a.bonus || 0)) * F.fI) : ''; }), da ? r2((da.pts || 0) * F.fI) : '']); });
+  rows.push([]); rows.push(['БАГИЙН ДҮН']); rows.push(['Байр', 'Баг', 'Гишүүд', 'Багийн оноо', 'Гишүүдийн дундаж', 'Гишүүдийн нийлбэр', 'Ш1', 'Ш2', 'Ш3', 'Ш4', 'Нарийвчлал %', 'Дундаж хариулах хугацаа (сек)']);
+  teamStats(false).sort((a, b) => a.rank - b.rank).forEach(t => rows.push([t.rank, t.name, t.members, t.score, t.avg, t.sum, t.stages[1], t.stages[2], t.stages[3], t.stages[4], t.accuracy, t.avgSec]));
   rows.push([]); rows.push(['БАГИЙН ХАРИУЛТУУД']); rows.push(['Баг', 'Асуулт', 'Хариулт', 'Хэн', 'Үнэлгээ']);
   Object.values(db.tans).forEach(x => { const q = qById(x.qid); rows.push([teamName(x.team), x.qid, q ? describeAnswer(q, x.ans) : '', x.byName || '', x.ok === true ? 'зөв' : x.ok === false ? 'буруу' : (db.ratings[x.team] || '')]); });
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="biologybyamra-results.csv"' });
